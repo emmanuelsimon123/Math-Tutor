@@ -18,13 +18,18 @@
 
     <main class="card">
       <form id="solver-form" class="solver-form">
-        <label for="problem" class="label">Enter your math problem</label>
+        <label for="problem" id="problem-label" class="label">Enter your math problem</label>
+
+        <div id="mode-help" class="subtitle" style="text-align:left; margin: 0 0 8px 0; max-width: 100%;">
+          Type the math problem you want solved.
+        </div>
+
         <textarea
           id="problem"
           name="problem"
           class="textarea"
           rows="8"
-          placeholder="Example: Solve for x: 2x^2 - 5x - 3 = 0, or ask: How do I find the slope of a line?"
+          placeholder="Example: Solve for x: 2x^2 - 5x - 3 = 0"
           required
         ></textarea>
 
@@ -58,7 +63,7 @@
         <div id="status" class="status" aria-live="polite"></div>
 
         <h2 class="output-title">Response</h2>
-        <div id="response" class="response-box">
+        <div id="response" class="response-box" aria-live="polite">
           Your solution will appear here.
         </div>
       </section>
