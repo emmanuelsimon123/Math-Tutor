@@ -105,6 +105,26 @@ body {
   min-height: 110px;
 }
 
+.math-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.math-toolbar button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.math-toolbar button:hover {
+  background: #d1d5db;
+}
+
 .button-row {
   display: flex;
   gap: 12px;

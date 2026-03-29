@@ -30,6 +30,23 @@
 
       <form id="chat-form" class="chat-form">
         <label for="user-input" class="label">Ask a math question</label>
+        <div class="math-toolbar" id="math-toolbar">
+          <button type="button" data-insert="^" title="Exponent">x&#x207F;</button>
+          <button type="button" data-insert="√()" data-cursor-offset="-1" title="Square root">√</button>
+          <button type="button" data-insert="/" title="Fraction / division">½</button>
+          <button type="button" data-insert="π" title="Pi">π</button>
+          <button type="button" data-insert="log()" data-cursor-offset="-1" title="Logarithm">log</button>
+          <button type="button" data-insert="ln()" data-cursor-offset="-1" title="Natural log">ln</button>
+          <button type="button" data-insert="sin()" data-cursor-offset="-1" title="Sine">sin</button>
+          <button type="button" data-insert="cos()" data-cursor-offset="-1" title="Cosine">cos</button>
+          <button type="button" data-insert="tan()" data-cursor-offset="-1" title="Tangent">tan</button>
+          <button type="button" data-insert="±" title="Plus-minus">±</button>
+          <button type="button" data-insert="≤" title="Less than or equal">≤</button>
+          <button type="button" data-insert="≥" title="Greater than or equal">≥</button>
+          <button type="button" data-insert="∞" title="Infinity">∞</button>
+          <button type="button" data-insert="×" title="Multiplication">×</button>
+          <button type="button" data-insert="÷" title="Division">÷</button>
+        </div>
         <textarea
           id="user-input"
           class="textarea"
