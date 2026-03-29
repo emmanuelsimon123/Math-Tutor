@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Math Tutor</title>
   <link rel="stylesheet" href="styles.css" />
+  <!-- KaTeX for rendering math notation -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="container">
@@ -30,7 +34,7 @@
           id="user-input"
           class="textarea"
           rows="4"
-          placeholder="Example: How do I solve 2x + 5 = 11?"
+          placeholder="Example: How do I solve 2x + 5 = 11? (Ctrl+Enter to send)"
           required
         ></textarea>
 
