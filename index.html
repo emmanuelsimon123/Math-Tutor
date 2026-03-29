@@ -1,1 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Math Tutor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>AI Math Tutor</h1>
+      <p class="subtitle">
+        Ask a pre-calculus math question and get help in different modes:
+        step-by-step, hint, tutor explanation, or answer checking.
+      </p>
+    </header>
 
+    <main class="card">
+      <form id="solver-form" class="solver-form">
+        <label for="problem" class="label">Enter your math problem</label>
+        <textarea
+          id="problem"
+          name="problem"
+          class="textarea"
+          rows="8"
+          placeholder="Example: Solve for x: 2x^2 - 5x - 3 = 0"
+          required
+        ></textarea>
+
+        <div class="controls">
+          <div class="control-group">
+            <label for="mode" class="label">Mode</label>
+            <select id="mode" name="mode" class="select">
+              <option value="steps">Steps</option>
+              <option value="hint">Hint</option>
+              <option value="tutor">Tutor</option>
+              <option value="check">Check</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="detail" class="label">Detail level</label>
+            <select id="detail" name="detail" class="select">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" id="solve-button" class="button">
+          Solve
+        </button>
+      </form>
+
+      <section class="output-section">
+        <div id="status" class="status" aria-live="polite"></div>
+
+        <h2 class="output-title">Response</h2>
+        <div id="response" class="response-box">
+          Your solution will appear here.
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
