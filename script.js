@@ -1,4 +1,4 @@
-const WORKER_URL = "https://YOUR_WORKER_URL/solve";
+const WORKER_URL = "https://ai-math-tutor-worker.emmanuel-simon.workers.dev/solve";
 
 const form = document.getElementById("solver-form");
 const problemInput = document.getElementById("problem");
