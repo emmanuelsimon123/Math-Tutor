@@ -11,62 +11,36 @@
     <header class="header">
       <h1>AI Math Tutor</h1>
       <p class="subtitle">
-        Ask any math question and get help in different modes:
-        step-by-step, hints, tutor-style explanation, or answer checking.
+        A Socratic math tutor that helps students think through problems step by step.
       </p>
     </header>
 
     <main class="card">
-      <form id="solver-form" class="solver-form">
-        <label for="problem" id="problem-label" class="label">Enter your math problem</label>
-
-        <div id="mode-help" class="subtitle" style="text-align:left; margin: 0 0 8px 0; max-width: 100%;">
-          Type the math problem you want solved.
+      <section id="chat" class="chat" aria-live="polite">
+        <div class="message assistant">
+          <div class="message-bubble">
+            Hi! I’m your math tutor. Ask me a math question, and I’ll help guide you step by step instead of just giving the answer.
+          </div>
         </div>
+      </section>
 
+      <form id="chat-form" class="chat-form">
+        <label for="user-input" class="label">Ask a math question</label>
         <textarea
-          id="problem"
-          name="problem"
+          id="user-input"
           class="textarea"
-          rows="8"
-          placeholder="Example: Solve for x: 2x^2 - 5x - 3 = 0"
+          rows="4"
+          placeholder="Example: How do I solve 2x + 5 = 11?"
           required
         ></textarea>
 
-        <div class="controls">
-          <div class="control-group">
-            <label for="mode" class="label">Mode</label>
-            <select id="mode" name="mode" class="select">
-              <option value="steps">Steps</option>
-              <option value="hint">Hint</option>
-              <option value="tutor">Tutor</option>
-              <option value="check">Check</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label for="detail" class="label">Detail level</label>
-            <select id="detail" name="detail" class="select">
-              <option value="low">Low</option>
-              <option value="medium" selected>Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
+        <div class="button-row">
+          <button type="submit" id="send-button" class="button">Send</button>
+          <button type="button" id="clear-button" class="button secondary">New Chat</button>
         </div>
-
-        <button type="submit" id="solve-button" class="button">
-          Solve
-        </button>
       </form>
 
-      <section class="output-section">
-        <div id="status" class="status" aria-live="polite"></div>
-
-        <h2 class="output-title">Response</h2>
-        <div id="response" class="response-box" aria-live="polite">
-          Your solution will appear here.
-        </div>
-      </section>
+      <div id="status" class="status" aria-live="polite"></div>
     </main>
   </div>
 
