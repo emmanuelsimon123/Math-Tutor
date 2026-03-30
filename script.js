@@ -12,10 +12,37 @@ const MAX_HISTORY = 20;
 
 let messages = [];
 
+const KATEX_DELIMITERS = [
+  { left: "$$", right: "$$", display: true },
+  { left: "$",  right: "$",  display: false },
+  { left: "\\[", right: "\\]", display: true },
+  { left: "\\(", right: "\\)", display: false }
+];
+
+// Counter used to generate unique, collision-free graph container IDs.
+let graphCounter = 0;
+
+// Milliseconds to wait before calling functionPlot so the container is in the
+// DOM and has measurable dimensions.
+const GRAPH_RENDER_DELAY = 50;
+
+/**
+ * Renders KaTeX math in the given element if the auto-render function is loaded.
+ */
+function applyKatex(el) {
+  if (typeof renderMathInElement === "function") {
+    renderMathInElement(el, {
+      delimiters: KATEX_DELIMITERS,
+      throwOnError: false
+    });
+  }
+}
+
 /**
  * Appends a chat bubble to the chat section.
- * For assistant messages, KaTeX auto-render is applied so math expressions
- * like $x^2$ (inline) or $$...$$ (display) are rendered as proper notation.
+ * For assistant messages:
+ *   - [GRAPH: expression] tags are replaced with interactive Function Plot graphs.
+ *   - Remaining text segments have KaTeX applied for math rendering.
  */
 function addMessage(role, content) {
   const messageEl = document.createElement("div");
@@ -25,19 +52,61 @@ function addMessage(role, content) {
   bubbleEl.className = "message-bubble";
 
   if (role === "assistant") {
-    // Set text first, then let KaTeX auto-render replace math delimiters.
-    bubbleEl.textContent = content;
-    // renderMathInElement is loaded via the KaTeX auto-render CDN script.
-    if (typeof renderMathInElement === "function") {
-      renderMathInElement(bubbleEl, {
-        delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "$",  right: "$",  display: false },
-          { left: "\\[", right: "\\]", display: true },
-          { left: "\\(", right: "\\)", display: false }
-        ],
-        throwOnError: false
+    const graphRegex = /\[GRAPH:\s*(.+?)\]/g;
+    const graphs = [];
+    let match;
+
+    while ((match = graphRegex.exec(content)) !== null) {
+      graphs.push({
+        fullMatch: match[0],
+        expression: match[1].trim(),
+        index: match.index
       });
+    }
+
+    if (graphs.length > 0) {
+      bubbleEl.classList.add("has-graph");
+
+      let lastIndex = 0;
+      graphs.forEach((graph, i) => {
+        // Text segment before this graph tag
+        const textBefore = content.slice(lastIndex, graph.index);
+        if (textBefore.trim()) {
+          const textEl = document.createElement("div");
+          textEl.textContent = textBefore;
+          applyKatex(textEl);
+          bubbleEl.appendChild(textEl);
+        }
+
+        // Label above the graph
+        const labelEl = document.createElement("div");
+        labelEl.className = "graph-label";
+        labelEl.textContent = "y = " + graph.expression;
+        bubbleEl.appendChild(labelEl);
+
+        // Graph container — store expression as data attribute for reliable retrieval
+        const graphId = "graph-" + Date.now() + "-" + (graphCounter++);
+        const graphDiv = document.createElement("div");
+        graphDiv.className = "graph-container";
+        graphDiv.id = graphId;
+        graphDiv.dataset.expression = graph.expression;
+        bubbleEl.appendChild(graphDiv);
+
+        lastIndex = graph.index + graph.fullMatch.length;
+      });
+
+      // Text segment after the last graph tag
+      const textAfter = content.slice(lastIndex);
+      if (textAfter.trim()) {
+        const textEl = document.createElement("div");
+        textEl.textContent = textAfter;
+        applyKatex(textEl);
+        bubbleEl.appendChild(textEl);
+      }
+    } else {
+      // No graphs — same as previous behaviour
+      bubbleEl.textContent = content;
+      applyKatex(bubbleEl);
     }
   } else {
     // User messages are always plain text.
@@ -47,6 +116,37 @@ function addMessage(role, content) {
   messageEl.appendChild(bubbleEl);
   chat.appendChild(messageEl);
   chat.scrollTop = chat.scrollHeight;
+
+  // Render any graphs after the elements are in the DOM so Function Plot can
+  // measure container dimensions correctly.
+  if (role === "assistant" && bubbleEl.classList.contains("has-graph")) {
+    setTimeout(() => {
+      bubbleEl.querySelectorAll(".graph-container").forEach((container) => {
+        const expression = container.dataset.expression || "";
+        // Use a wider x-domain for trig functions
+        const isTrig = /\b(sin|cos|tan)\b/.test(expression);
+        const xDomain = isTrig ? [-2 * Math.PI, 2 * Math.PI] : [-10, 10];
+        try {
+          functionPlot({
+            target: "#" + container.id,
+            width: container.offsetWidth || 400,
+            height: 300,
+            grid: true,
+            xAxis: { domain: xDomain },
+            data: [{
+              fn: expression,
+              graphType: "polyline"
+            }]
+          });
+        } catch (e) {
+          container.textContent = "Could not render graph for: " + expression;
+          container.style.padding = "12px";
+          container.style.color = "#b91c1c";
+          container.style.fontStyle = "italic";
+        }
+      });
+    }, GRAPH_RENDER_DELAY);
+  }
 }
 
 /**
