@@ -217,4 +217,48 @@ body {
 /* Widen assistant bubbles that contain graphs */
 .message-bubble.has-graph {
   max-width: 90%;
+  white-space: normal;
+}
+
+/* Slider controls for parameterized graphs */
+.graph-sliders {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.graph-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.graph-slider-row label {
+  font-weight: 600;
+  min-width: 24px;
+  color: #1e40af;
+}
+
+.graph-slider-row input[type="range"] {
+  flex: 1;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+.graph-slider-row .slider-value {
+  min-width: 40px;
+  text-align: right;
+  font-family: monospace;
+  color: #4b5563;
+}
+
+.graph-error {
+  padding: 12px;
+  color: #b91c1c;
+  font-style: italic;
+  font-size: 0.9rem;
 }
