@@ -11,7 +11,26 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <div class="container">
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <h1>AI Math Tutor</h1>
+      <p class="login-subtitle">Enter your class password to get started.</p>
+      <form id="login-form" class="login-form">
+        <input
+          type="password"
+          id="login-password"
+          class="login-input"
+          placeholder="Class password"
+          required
+          autocomplete="off"
+        />
+        <button type="submit" class="button login-button">Log In</button>
+        <div id="login-error" class="login-error" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="container" id="app-container" style="display: none;">
     <header class="header">
       <h1>AI Math Tutor</h1>
       <p class="subtitle">
@@ -31,29 +50,28 @@
       <form id="chat-form" class="chat-form">
         <label for="user-input" class="label">Ask a math question</label>
         <div class="math-toolbar" id="math-toolbar">
-          <button type="button" data-insert="^" title="Exponent">x&#x207F;</button>
-          <button type="button" data-insert="₁" title="Subscript 1">x₁</button>
-          <button type="button" data-insert="₂" title="Subscript 2">x₂</button>
-          <button type="button" data-insert="√()" data-cursor-offset="-1" title="Square root">√</button>
-          <button type="button" data-insert="/" title="Fraction / division">½</button>
-          <button type="button" data-insert="π" title="Pi">π</button>
-          <button type="button" data-insert="log()" data-cursor-offset="-1" title="Logarithm">log</button>
-          <button type="button" data-insert="ln()" data-cursor-offset="-1" title="Natural log">ln</button>
-          <button type="button" data-insert="sin()" data-cursor-offset="-1" title="Sine">sin</button>
-          <button type="button" data-insert="cos()" data-cursor-offset="-1" title="Cosine">cos</button>
-          <button type="button" data-insert="tan()" data-cursor-offset="-1" title="Tangent">tan</button>
-          <button type="button" data-insert="±" title="Plus-minus">±</button>
-          <button type="button" data-insert="≤" title="Less than or equal">≤</button>
-          <button type="button" data-insert="≥" title="Greater than or equal">≥</button>
-          <button type="button" data-insert="∞" title="Infinity">∞</button>
-          <button type="button" data-insert="×" title="Multiplication">×</button>
-          <button type="button" data-insert="÷" title="Division">÷</button>
+          <button type="button" data-insert="^" title="Exponent" aria-label="Insert exponent">x&#x207F;</button>
+          <button type="button" id="subscript-toggle" title="Subscript mode: next number typed becomes subscript" aria-label="Toggle subscript mode">x₋</button>
+          <button type="button" data-insert="√()" data-cursor-offset="-1" title="Square root" aria-label="Insert square root">√</button>
+          <button type="button" data-insert="/" title="Fraction / division" aria-label="Insert fraction">½</button>
+          <button type="button" data-insert="π" title="Pi" aria-label="Insert pi">π</button>
+          <button type="button" data-insert="log()" data-cursor-offset="-1" title="Logarithm" aria-label="Insert logarithm">log</button>
+          <button type="button" data-insert="ln()" data-cursor-offset="-1" title="Natural log" aria-label="Insert natural log">ln</button>
+          <button type="button" data-insert="sin()" data-cursor-offset="-1" title="Sine" aria-label="Insert sine">sin</button>
+          <button type="button" data-insert="cos()" data-cursor-offset="-1" title="Cosine" aria-label="Insert cosine">cos</button>
+          <button type="button" data-insert="tan()" data-cursor-offset="-1" title="Tangent" aria-label="Insert tangent">tan</button>
+          <button type="button" data-insert="±" title="Plus-minus" aria-label="Insert plus-minus">±</button>
+          <button type="button" data-insert="≤" title="Less than or equal" aria-label="Insert less than or equal">≤</button>
+          <button type="button" data-insert="≥" title="Greater than or equal" aria-label="Insert greater than or equal">≥</button>
+          <button type="button" data-insert="∞" title="Infinity" aria-label="Insert infinity">∞</button>
+          <button type="button" data-insert="×" title="Multiplication" aria-label="Insert multiplication">×</button>
+          <button type="button" data-insert="÷" title="Division" aria-label="Insert division">÷</button>
         </div>
         <textarea
           id="user-input"
           class="textarea"
           rows="4"
-          placeholder="Example: How do I solve 2x + 5 = 11? (Ctrl+Enter to send)"
+          placeholder="Example: How do I solve 2x + 5 = 11? (Ctrl/Cmd+Enter to send)"
           required
         ></textarea>
 
