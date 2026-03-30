@@ -184,3 +184,37 @@ body {
     width: 100%;
   }
 }
+
+/* Graph container inside chat bubbles */
+.graph-container {
+  margin: 12px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.graph-container svg {
+  display: block;
+}
+
+/* Make sure graph labels inside the SVG are readable */
+.graph-container text {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+}
+
+/* Label shown above the graph like "y = x^2 - 4" */
+.graph-label {
+  padding: 6px 12px;
+  background: #f0f4ff;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #1e40af;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Widen assistant bubbles that contain graphs */
+.message-bubble.has-graph {
+  max-width: 90%;
+}
