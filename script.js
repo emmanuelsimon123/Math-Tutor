@@ -78,6 +78,24 @@ function resetChat() {
 
 clearButton.addEventListener("click", resetChat);
 
+// Math symbol toolbar: insert symbol/template at cursor position in the textarea.
+document.getElementById("math-toolbar").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-insert]");
+  if (!button) return;
+
+  const insertText = button.dataset.insert;
+  const cursorOffset = button.dataset.cursorOffset ? parseInt(button.dataset.cursorOffset, 10) : 0;
+  const start = userInput.selectionStart;
+  const end = userInput.selectionEnd;
+
+  userInput.value =
+    userInput.value.slice(0, start) + insertText + userInput.value.slice(end);
+
+  const newCursor = start + insertText.length + cursorOffset;
+  userInput.setSelectionRange(newCursor, newCursor);
+  userInput.focus();
+});
+
 // Keyboard shortcut: Ctrl+Enter or Cmd+Enter submits the form.
 userInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
