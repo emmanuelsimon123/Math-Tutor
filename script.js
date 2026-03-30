@@ -1,4 +1,11 @@
 const WORKER_URL = "https://ai-math-tutor-worker.emmanuel-simon.workers.dev/solve";
+const AUTH_URL = WORKER_URL.replace("/solve", "/auth");
+
+const loginOverlay = document.getElementById("login-overlay");
+const loginForm = document.getElementById("login-form");
+const loginPassword = document.getElementById("login-password");
+const loginError = document.getElementById("login-error");
+const appContainer = document.getElementById("app-container");
 
 const chat = document.getElementById("chat");
 const form = document.getElementById("chat-form");
@@ -6,6 +13,52 @@ const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const clearButton = document.getElementById("clear-button");
 const statusDiv = document.getElementById("status");
+
+let storedPassword = sessionStorage.getItem("mathTutorPassword") || "";
+
+async function attemptLogin(password) {
+  try {
+    const response = await fetch(AUTH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    if (response.ok) {
+      storedPassword = password;
+      sessionStorage.setItem("mathTutorPassword", password);
+      loginOverlay.style.display = "none";
+      appContainer.style.display = "";
+      userInput.focus();
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const pw = loginPassword.value.trim();
+  if (!pw) return;
+  loginError.textContent = "";
+  const success = await attemptLogin(pw);
+  if (!success) {
+    loginError.textContent = "Incorrect password. Please try again.";
+    loginPassword.value = "";
+    loginPassword.focus();
+  }
+});
+
+// Auto-login if password is stored from a previous session tab
+if (storedPassword) {
+  attemptLogin(storedPassword).then(success => {
+    if (!success) {
+      sessionStorage.removeItem("mathTutorPassword");
+      storedPassword = "";
+    }
+  });
+}
 
 // Maximum number of messages to send to the API to avoid token limits.
 const MAX_HISTORY = 20;
@@ -22,9 +75,42 @@ const KATEX_DELIMITERS = [
 // Counter used to generate unique, collision-free graph container IDs.
 let graphCounter = 0;
 
-// Milliseconds to wait before calling functionPlot so the container is in the
-// DOM and has measurable dimensions.
-const GRAPH_RENDER_DELAY = 50;
+const SUBSCRIPT_MAP = {
+  "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄",
+  "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉"
+};
+
+let subscriptMode = false;
+const subscriptButton = document.getElementById("subscript-toggle");
+
+subscriptButton.addEventListener("click", () => {
+  subscriptMode = !subscriptMode;
+  subscriptButton.classList.toggle("active", subscriptMode);
+  userInput.focus();
+});
+
+/**
+ * Returns a Promise that resolves when functionPlot is available.
+ * Checks every 50ms, up to a maximum wait time.
+ */
+function waitForFunctionPlot(maxWait = 5000) {
+  return new Promise((resolve, reject) => {
+    if (typeof functionPlot === "function") {
+      resolve();
+      return;
+    }
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (typeof functionPlot === "function") {
+        clearInterval(interval);
+        resolve();
+      } else if (Date.now() - start > maxWait) {
+        clearInterval(interval);
+        reject(new Error("Function Plot library failed to load"));
+      }
+    }, 50);
+  });
+}
 
 /**
  * Renders KaTeX math in the given element if the auto-render function is loaded.
@@ -171,67 +257,78 @@ function addMessage(role, content) {
   // Render any graphs after the elements are in the DOM so Function Plot can
   // measure container dimensions correctly.
   if (role === "assistant" && bubbleEl.classList.contains("has-graph")) {
-    setTimeout(() => {
-      bubbleEl.querySelectorAll(".graph-container").forEach((container) => {
-        const expression = container.dataset.expression || "";
-        const params = JSON.parse(container.dataset.params || "[]");
-        // Use a wider x-domain for trig functions
-        const isTrig = /\b(sin|cos|tan)\b/.test(expression);
-        const xDomain = isTrig ? [-2 * Math.PI, 2 * Math.PI] : [-10, 10];
+    waitForFunctionPlot().then(() => {
+      // Use requestAnimationFrame to ensure DOM is laid out
+      requestAnimationFrame(() => {
+        bubbleEl.querySelectorAll(".graph-container").forEach((container) => {
+          const expression = container.dataset.expression || "";
+          const params = JSON.parse(container.dataset.params || "[]");
+          // Use a wider x-domain for trig functions
+          const isTrig = /\b(sin|cos|tan)\b/.test(expression);
+          const xDomain = isTrig ? [-2 * Math.PI, 2 * Math.PI] : [-10, 10];
 
-        // Build initial scope from parameter defaults
-        const scope = {};
-        params.forEach(p => { scope[p.name] = p.default; });
+          // Build initial scope from parameter defaults
+          const scope = {};
+          params.forEach(p => { scope[p.name] = p.default; });
 
-        function renderGraph() {
-          try {
-            // Clear the container before re-rendering
-            while (container.firstChild) {
-              container.removeChild(container.firstChild);
-            }
-            functionPlot({
-              target: "#" + container.id,
-              width: container.offsetWidth || 400,
-              height: 300,
-              grid: true,
-              xAxis: { domain: xDomain },
-              data: [{
-                fn: expression,
-                graphType: "polyline",
-                scope: Object.assign({}, scope)
-              }]
-            });
-          } catch (e) {
-            while (container.firstChild) {
-              container.removeChild(container.firstChild);
-            }
-            const errorEl = document.createElement("div");
-            errorEl.className = "graph-error";
-            errorEl.textContent = "Could not render graph for: " + expression;
-            container.appendChild(errorEl);
-          }
-        }
-
-        renderGraph();
-
-        // Hook up sliders if they exist
-        const slidersDiv = container.nextElementSibling;
-        if (slidersDiv && slidersDiv.classList.contains("graph-sliders")) {
-          slidersDiv.querySelectorAll("input[type='range']").forEach(slider => {
-            slider.addEventListener("input", () => {
-              const paramName = slider.dataset.paramName;
-              const newValue = parseFloat(slider.value);
-              scope[paramName] = newValue;
-              const valueDisplay = slider.nextElementSibling;
-              if (valueDisplay) {
-                valueDisplay.textContent = newValue.toFixed(1);
+          function renderGraph() {
+            try {
+              // Clear the container before re-rendering
+              while (container.firstChild) {
+                container.removeChild(container.firstChild);
               }
-              renderGraph();
+              functionPlot({
+                target: "#" + container.id,
+                width: container.offsetWidth || 400,
+                height: 300,
+                grid: true,
+                xAxis: { domain: xDomain },
+                data: [{
+                  fn: expression,
+                  graphType: "polyline",
+                  scope: Object.assign({}, scope)
+                }]
+              });
+            } catch (e) {
+              while (container.firstChild) {
+                container.removeChild(container.firstChild);
+              }
+              const errorEl = document.createElement("div");
+              errorEl.className = "graph-error";
+              errorEl.textContent = "This graph couldn't be displayed — try asking the tutor to rephrase the equation.";
+              container.appendChild(errorEl);
+            }
+          }
+
+          renderGraph();
+
+          // Hook up sliders if they exist
+          const slidersDiv = container.nextElementSibling;
+          if (slidersDiv && slidersDiv.classList.contains("graph-sliders")) {
+            slidersDiv.querySelectorAll("input[type='range']").forEach(slider => {
+              slider.addEventListener("input", () => {
+                const paramName = slider.dataset.paramName;
+                const newValue = parseFloat(slider.value);
+                scope[paramName] = newValue;
+                const valueDisplay = slider.nextElementSibling;
+                if (valueDisplay) {
+                  valueDisplay.textContent = newValue.toFixed(1);
+                }
+                renderGraph();
+              });
             });
-          });
-        }
+          }
+        });
       });
-    }, GRAPH_RENDER_DELAY);
+    }).catch(() => {
+      // If functionPlot never loaded, show friendly errors
+      bubbleEl.querySelectorAll(".graph-container").forEach((container) => {
+        const errorEl = document.createElement("div");
+        errorEl.className = "graph-error";
+        errorEl.textContent = "The graphing library is still loading. Please try asking again in a moment.";
+        container.appendChild(errorEl);
+      });
+    });
   }
 }
 
@@ -283,7 +380,21 @@ document.getElementById("math-toolbar").addEventListener("click", (event) => {
 });
 
 // Keyboard shortcut: Ctrl+Enter or Cmd+Enter submits the form.
+// Subscript mode: intercept number keys (0-9) when subscriptMode is active.
 userInput.addEventListener("keydown", (event) => {
+  if (subscriptMode && SUBSCRIPT_MAP[event.key]) {
+    event.preventDefault();
+    const start = userInput.selectionStart;
+    const end = userInput.selectionEnd;
+    const sub = SUBSCRIPT_MAP[event.key];
+    userInput.value = userInput.value.slice(0, start) + sub + userInput.value.slice(end);
+    const newCursor = start + sub.length;
+    userInput.setSelectionRange(newCursor, newCursor);
+    // Deactivate subscript mode after inserting one character
+    subscriptMode = false;
+    subscriptButton.classList.remove("active");
+    return;
+  }
   if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
     form.requestSubmit();
@@ -324,7 +435,7 @@ form.addEventListener("submit", async (event) => {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ messages: trimmedMessages })
+      body: JSON.stringify({ password: storedPassword, messages: trimmedMessages })
     });
 
     let data;
