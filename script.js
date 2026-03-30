@@ -59,7 +59,7 @@ function addMessage(role, content) {
     while ((match = graphRegex.exec(content)) !== null) {
       graphs.push({
         fullMatch: match[0],
-        expression: match[1].trim(),
+        raw: match[1].trim(),
         index: match.index
       });
     }
@@ -78,19 +78,70 @@ function addMessage(role, content) {
           bubbleEl.appendChild(textEl);
         }
 
+        // Parse "expression | param1=default:min:max | ..."
+        const parts = graph.raw.split("|").map(s => s.trim());
+        const expression = parts[0];
+        const params = [];
+        for (let p = 1; p < parts.length; p++) {
+          const paramMatch = parts[p].match(/^(\w+)=(-?[\d.]+):(-?[\d.]+):(-?[\d.]+)$/);
+          if (paramMatch) {
+            params.push({
+              name: paramMatch[1],
+              default: parseFloat(paramMatch[2]),
+              min: parseFloat(paramMatch[3]),
+              max: parseFloat(paramMatch[4])
+            });
+          }
+        }
+
         // Label above the graph
         const labelEl = document.createElement("div");
         labelEl.className = "graph-label";
-        labelEl.textContent = "y = " + graph.expression;
+        labelEl.textContent = "y = " + expression;
         bubbleEl.appendChild(labelEl);
 
-        // Graph container — store expression as data attribute for reliable retrieval
+        // Graph container — store expression and params as data attributes
         const graphId = "graph-" + Date.now() + "-" + (graphCounter++);
         const graphDiv = document.createElement("div");
         graphDiv.className = "graph-container";
         graphDiv.id = graphId;
-        graphDiv.dataset.expression = graph.expression;
+        graphDiv.dataset.expression = expression;
+        graphDiv.dataset.params = JSON.stringify(params);
         bubbleEl.appendChild(graphDiv);
+
+        // Slider container (only when parameters exist)
+        if (params.length > 0) {
+          const slidersDiv = document.createElement("div");
+          slidersDiv.className = "graph-sliders";
+          slidersDiv.dataset.graphId = graphId;
+
+          params.forEach(param => {
+            const row = document.createElement("div");
+            row.className = "graph-slider-row";
+
+            const label = document.createElement("label");
+            label.textContent = param.name;
+            row.appendChild(label);
+
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = param.min;
+            slider.max = param.max;
+            slider.step = 0.1;
+            slider.value = param.default;
+            slider.dataset.paramName = param.name;
+            row.appendChild(slider);
+
+            const valueDisplay = document.createElement("span");
+            valueDisplay.className = "slider-value";
+            valueDisplay.textContent = param.default;
+            row.appendChild(valueDisplay);
+
+            slidersDiv.appendChild(row);
+          });
+
+          bubbleEl.appendChild(slidersDiv);
+        }
 
         lastIndex = graph.index + graph.fullMatch.length;
       });
@@ -123,26 +174,61 @@ function addMessage(role, content) {
     setTimeout(() => {
       bubbleEl.querySelectorAll(".graph-container").forEach((container) => {
         const expression = container.dataset.expression || "";
+        const params = JSON.parse(container.dataset.params || "[]");
         // Use a wider x-domain for trig functions
         const isTrig = /\b(sin|cos|tan)\b/.test(expression);
         const xDomain = isTrig ? [-2 * Math.PI, 2 * Math.PI] : [-10, 10];
-        try {
-          functionPlot({
-            target: "#" + container.id,
-            width: container.offsetWidth || 400,
-            height: 300,
-            grid: true,
-            xAxis: { domain: xDomain },
-            data: [{
-              fn: expression,
-              graphType: "polyline"
-            }]
+
+        // Build initial scope from parameter defaults
+        const scope = {};
+        params.forEach(p => { scope[p.name] = p.default; });
+
+        function renderGraph() {
+          try {
+            // Clear the container before re-rendering
+            while (container.firstChild) {
+              container.removeChild(container.firstChild);
+            }
+            functionPlot({
+              target: "#" + container.id,
+              width: container.offsetWidth || 400,
+              height: 300,
+              grid: true,
+              xAxis: { domain: xDomain },
+              data: [{
+                fn: expression,
+                graphType: "polyline",
+                scope: Object.assign({}, scope)
+              }]
+            });
+          } catch (e) {
+            while (container.firstChild) {
+              container.removeChild(container.firstChild);
+            }
+            const errorEl = document.createElement("div");
+            errorEl.className = "graph-error";
+            errorEl.textContent = "Could not render graph for: " + expression;
+            container.appendChild(errorEl);
+          }
+        }
+
+        renderGraph();
+
+        // Hook up sliders if they exist
+        const slidersDiv = container.nextElementSibling;
+        if (slidersDiv && slidersDiv.classList.contains("graph-sliders")) {
+          slidersDiv.querySelectorAll("input[type='range']").forEach(slider => {
+            slider.addEventListener("input", () => {
+              const paramName = slider.dataset.paramName;
+              const newValue = parseFloat(slider.value);
+              scope[paramName] = newValue;
+              const valueDisplay = slider.nextElementSibling;
+              if (valueDisplay) {
+                valueDisplay.textContent = newValue.toFixed(1);
+              }
+              renderGraph();
+            });
           });
-        } catch (e) {
-          container.textContent = "Could not render graph for: " + expression;
-          container.style.padding = "12px";
-          container.style.color = "#b91c1c";
-          container.style.fontStyle = "italic";
         }
       });
     }, GRAPH_RENDER_DELAY);
