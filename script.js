@@ -59,6 +59,11 @@ darkToggleBtn.addEventListener("click", () => {
 // ============================================================
 // AUTH / LOGIN
 // ============================================================
+// The class password is intentionally stored in sessionStorage so that students
+// don't have to re-enter it on every page refresh within the same tab.
+// sessionStorage is automatically cleared when the tab is closed and is not
+// accessible from other origins, making it an acceptable choice for this
+// low-sensitivity, school-classroom use case.
 let storedPassword = sessionStorage.getItem("mathTutorPassword") || "";
 
 async function attemptLogin(password) {
@@ -311,7 +316,7 @@ function renderAssistantContent(bubbleEl, content) {
       if (!isSafeExpression(expression)) {
         const errorEl = document.createElement("div");
         errorEl.className = "graph-error";
-        errorEl.textContent = "This graph couldn\u2019t be displayed \u2014 the expression contains unexpected characters.";
+        errorEl.textContent = "This graph couldn\u2019t be displayed \u2014 the expression contains unexpected characters. Only letters, numbers, and basic math operators (+, -, *, /, ^) are allowed.";
         bubbleEl.appendChild(errorEl);
         lastIndex = graph.index + graph.fullMatch.length;
         return;

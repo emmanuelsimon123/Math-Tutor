@@ -199,11 +199,15 @@ async function handleSolve(request, env, allowedOrigin) {
             sanitizedParts.push({ type: "text", text: part.text });
           }
         } else if (part.type === "image_url" && msg.role === "user") {
-          // Only accept base64 data URLs — reject arbitrary remote URLs
+          // Only accept base64 data URLs — reject arbitrary remote URLs.
+          // Also enforce a maximum encoded size (~7 MB base64 ≈ ~5 MB decoded)
+          // to prevent resource exhaustion.
+          const MAX_IMAGE_BASE64_BYTES = 7 * 1024 * 1024;
           if (
             part.image_url &&
             typeof part.image_url.url === "string" &&
-            part.image_url.url.startsWith("data:image/")
+            part.image_url.url.startsWith("data:image/") &&
+            part.image_url.url.length <= MAX_IMAGE_BASE64_BYTES
           ) {
             sanitizedParts.push({
               type: "image_url",
