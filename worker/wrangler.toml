@@ -1,0 +1,19 @@
+name = "ai-math-tutor-worker"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+# ── Variables ────────────────────────────────────────────────────────────────
+# Non-secret configuration.  Replace the value below with your actual GitHub
+# Pages URL before deploying.
+[vars]
+ALLOWED_ORIGIN = "https://your-username.github.io"
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+# Do NOT store secrets in this file.  Set them with the Wrangler CLI:
+#
+#   wrangler secret put STUDENT_PASSWORD
+#   wrangler secret put GROQ_API_KEY
+#
+# Required secrets:
+#   STUDENT_PASSWORD  — The class password your students will enter.
+#   GROQ_API_KEY      — Your Groq API key (https://console.groq.com).
