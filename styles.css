@@ -1,3 +1,140 @@
+/* ============================================================
+   CSS CUSTOM PROPERTIES — LIGHT THEME (default)
+   ============================================================ */
+:root {
+  --bg: #f4f7fb;
+  --text: #1f2937;
+  --card-bg: #ffffff;
+  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --subtitle-color: #4b5563;
+  --border: #e5e7eb;
+  --border-input: #d1d5db;
+  --toolbar-btn-bg: #e5e7eb;
+  --toolbar-btn-hover: #d1d5db;
+  --user-bubble-bg: #2563eb;
+  --user-bubble-text: #ffffff;
+  --assistant-bubble-bg: #f9fafb;
+  --assistant-bubble-text: #111827;
+  --graph-label-bg: #f0f4ff;
+  --graph-label-text: #1e40af;
+  --graph-slider-label: #1e40af;
+  --slider-value-text: #4b5563;
+  --graph-sliders-bg: #f8fafc;
+  --status-color: #2563eb;
+  --login-bg: #f4f7fb;
+  --login-card-bg: #ffffff;
+  --btn-primary: #2563eb;
+  --btn-primary-hover: #1d4ed8;
+  --btn-primary-disabled: #93c5fd;
+  --btn-secondary-bg: #e5e7eb;
+  --btn-secondary-text: #111827;
+  --btn-secondary-hover: #d1d5db;
+  --icon-btn-hover: rgba(0, 0, 0, 0.06);
+  --chip-bg: #eff6ff;
+  --chip-text: #1d4ed8;
+  --chip-border: #bfdbfe;
+  --chip-hover: #dbeafe;
+  --preview-bg: #f0f4ff;
+  --preview-border: #bfdbfe;
+  --textarea-bg: #ffffff;
+  --textarea-text: #1f2937;
+  --loading-bg: #f4f7fb;
+  --typing-dot: #9ca3af;
+}
+
+/* ============================================================
+   DARK THEME — via system preference (unless user forced light)
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111827;
+    --text: #f9fafb;
+    --card-bg: #1f2937;
+    --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --subtitle-color: #9ca3af;
+    --border: #374151;
+    --border-input: #4b5563;
+    --toolbar-btn-bg: #374151;
+    --toolbar-btn-hover: #4b5563;
+    --user-bubble-bg: #3b82f6;
+    --user-bubble-text: #ffffff;
+    --assistant-bubble-bg: #374151;
+    --assistant-bubble-text: #f9fafb;
+    --graph-label-bg: #1e3a5f;
+    --graph-label-text: #93c5fd;
+    --graph-slider-label: #93c5fd;
+    --slider-value-text: #9ca3af;
+    --graph-sliders-bg: #1f2937;
+    --status-color: #60a5fa;
+    --login-bg: #111827;
+    --login-card-bg: #1f2937;
+    --btn-primary: #3b82f6;
+    --btn-primary-hover: #2563eb;
+    --btn-primary-disabled: #1d4ed8;
+    --btn-secondary-bg: #374151;
+    --btn-secondary-text: #f9fafb;
+    --btn-secondary-hover: #4b5563;
+    --icon-btn-hover: rgba(255, 255, 255, 0.08);
+    --chip-bg: #1e3a5f;
+    --chip-text: #93c5fd;
+    --chip-border: #1d4ed8;
+    --chip-hover: #1e40af;
+    --preview-bg: #1e3a5f;
+    --preview-border: #1d4ed8;
+    --textarea-bg: #374151;
+    --textarea-text: #f9fafb;
+    --loading-bg: #111827;
+    --typing-dot: #6b7280;
+  }
+}
+
+/* ============================================================
+   DARK THEME — manual override (user clicked the toggle)
+   ============================================================ */
+[data-theme="dark"] {
+  --bg: #111827;
+  --text: #f9fafb;
+  --card-bg: #1f2937;
+  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --subtitle-color: #9ca3af;
+  --border: #374151;
+  --border-input: #4b5563;
+  --toolbar-btn-bg: #374151;
+  --toolbar-btn-hover: #4b5563;
+  --user-bubble-bg: #3b82f6;
+  --user-bubble-text: #ffffff;
+  --assistant-bubble-bg: #374151;
+  --assistant-bubble-text: #f9fafb;
+  --graph-label-bg: #1e3a5f;
+  --graph-label-text: #93c5fd;
+  --graph-slider-label: #93c5fd;
+  --slider-value-text: #9ca3af;
+  --graph-sliders-bg: #1f2937;
+  --status-color: #60a5fa;
+  --login-bg: #111827;
+  --login-card-bg: #1f2937;
+  --btn-primary: #3b82f6;
+  --btn-primary-hover: #2563eb;
+  --btn-primary-disabled: #1d4ed8;
+  --btn-secondary-bg: #374151;
+  --btn-secondary-text: #f9fafb;
+  --btn-secondary-hover: #4b5563;
+  --icon-btn-hover: rgba(255, 255, 255, 0.08);
+  --chip-bg: #1e3a5f;
+  --chip-text: #93c5fd;
+  --chip-border: #1d4ed8;
+  --chip-hover: #1e40af;
+  --preview-bg: #1e3a5f;
+  --preview-border: #1d4ed8;
+  --textarea-bg: #374151;
+  --textarea-text: #f9fafb;
+  --loading-bg: #111827;
+  --typing-dot: #6b7280;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
 * {
   box-sizing: border-box;
 }
@@ -5,40 +142,115 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f4f7fb;
-  color: #1f2937;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.2s, color 0.2s;
 }
 
+/* ============================================================
+   LOADING OVERLAY
+   ============================================================ */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--loading-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid var(--border);
+  border-top-color: var(--btn-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  color: var(--subtitle-color);
+  font-size: 1rem;
+  margin: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
 .container {
   max-width: 900px;
   margin: 0 auto;
   padding: 32px 16px;
 }
 
+/* ============================================================
+   HEADER
+   ============================================================ */
 .header {
   text-align: center;
   margin-bottom: 24px;
 }
 
-.header h1 {
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   margin-bottom: 8px;
+}
+
+.header-top h1 {
+  margin: 0;
   font-size: 2rem;
 }
 
 .subtitle {
   margin: 0 auto;
   max-width: 700px;
-  color: #4b5563;
+  color: var(--subtitle-color);
   line-height: 1.5;
 }
 
-.card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+/* ============================================================
+   ICON BUTTON (dark-mode toggle, etc.)
+   ============================================================ */
+.icon-button {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s;
+  flex-shrink: 0;
 }
 
+.icon-button:hover {
+  background: var(--icon-btn-hover);
+}
+
+/* ============================================================
+   CARD
+   ============================================================ */
+.card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--card-shadow);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+/* ============================================================
+   CHAT
+   ============================================================ */
 .chat {
   display: flex;
   flex-direction: column;
@@ -69,22 +281,94 @@ body {
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .message.user .message-bubble {
-  background: #2563eb;
-  color: white;
+  background: var(--user-bubble-bg);
+  color: var(--user-bubble-text);
   border-bottom-right-radius: 6px;
   border: none;
 }
 
 .message.assistant .message-bubble {
-  background: #f9fafb;
-  color: #111827;
+  background: var(--assistant-bubble-bg);
+  color: var(--assistant-bubble-text);
   border-bottom-left-radius: 6px;
 }
 
+/* Image in a chat bubble (uploaded by user) */
+.chat-image {
+  display: block;
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  object-fit: contain;
+}
+
+/* ============================================================
+   TYPING INDICATOR (shown during streaming)
+   ============================================================ */
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--typing-dot);
+  display: inline-block;
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+/* ============================================================
+   SUGGESTION CHIPS
+   ============================================================ */
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0 8px 0;
+}
+
+.suggestion-chip {
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border: 1px solid var(--chip-border);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1.4;
+}
+
+.suggestion-chip:hover {
+  background: var(--chip-hover);
+}
+
+/* ============================================================
+   CHAT FORM
+   ============================================================ */
 .chat-form {
   display: flex;
   flex-direction: column;
@@ -95,16 +379,9 @@ body {
   font-weight: 600;
 }
 
-.textarea {
-  width: 100%;
-  resize: vertical;
-  padding: 14px;
-  font-size: 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  min-height: 110px;
-}
-
+/* ============================================================
+   MATH TOOLBAR
+   ============================================================ */
 .math-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -115,16 +392,97 @@ body {
 .math-toolbar button {
   padding: 6px 10px;
   border-radius: 8px;
-  background: #e5e7eb;
-  border: 1px solid #d1d5db;
+  background: var(--toolbar-btn-bg);
+  border: 1px solid var(--border-input);
   font-size: 0.9rem;
   cursor: pointer;
+  color: var(--text);
+  transition: background 0.15s;
 }
 
 .math-toolbar button:hover {
-  background: #d1d5db;
+  background: var(--toolbar-btn-hover);
 }
 
+/* Upload button inside toolbar (slightly differentiated) */
+.upload-btn {
+  margin-left: auto;
+}
+
+/* ============================================================
+   TEXTAREA
+   ============================================================ */
+.textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 14px;
+  font-size: 1rem;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  min-height: 60px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--textarea-bg);
+  color: var(--textarea-text);
+  transition: border-color 0.15s, background 0.2s, color 0.2s;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--btn-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Drag-and-drop highlight */
+.textarea.drag-over {
+  border-color: var(--btn-primary);
+  background: var(--chip-bg);
+}
+
+/* ============================================================
+   IMAGE PREVIEW
+   ============================================================ */
+.image-preview-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--preview-bg);
+  border: 1px solid var(--preview-border);
+  border-radius: 10px;
+}
+
+.image-preview-thumb {
+  max-width: 120px;
+  max-height: 90px;
+  border-radius: 6px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+}
+
+.remove-image-btn {
+  background: transparent;
+  border: 1px solid var(--border-input);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.remove-image-btn:hover {
+  background: var(--toolbar-btn-hover);
+}
+
+/* ============================================================
+   BUTTON ROW
+   ============================================================ */
 .button-row {
   display: flex;
   gap: 12px;
@@ -132,7 +490,7 @@ body {
 }
 
 .button {
-  background: #2563eb;
+  background: var(--btn-primary);
   color: white;
   border: none;
   border-radius: 10px;
@@ -140,91 +498,84 @@ body {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s;
 }
 
 .button:hover {
-  background: #1d4ed8;
+  background: var(--btn-primary-hover);
 }
 
 .button:disabled {
-  background: #93c5fd;
+  background: var(--btn-primary-disabled);
   cursor: not-allowed;
 }
 
 .button.secondary {
-  background: #e5e7eb;
-  color: #111827;
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
 }
 
 .button.secondary:hover {
-  background: #d1d5db;
+  background: var(--btn-secondary-hover);
 }
 
+.button.secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   STATUS
+   ============================================================ */
 .status {
   min-height: 24px;
   margin-top: 14px;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--status-color);
 }
 
 .error {
   color: #b91c1c;
 }
 
-@media (max-width: 640px) {
-  .card {
-    padding: 18px;
-  }
-
-  .message-bubble {
-    max-width: 92%;
-  }
-
-  .button {
-    width: 100%;
-  }
-}
-
-/* Graph container inside chat bubbles */
+/* ============================================================
+   GRAPH CONTAINERS
+   ============================================================ */
 .graph-container {
   margin: 12px 0;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
 }
 
 .graph-container svg {
   display: block;
 }
 
-/* Make sure graph labels inside the SVG are readable */
 .graph-container text {
   font-family: Arial, sans-serif;
   font-size: 12px;
 }
 
-/* Label shown above the graph like "y = x^2 - 4" */
 .graph-label {
   padding: 6px 12px;
-  background: #f0f4ff;
+  background: var(--graph-label-bg);
   font-family: monospace;
   font-size: 0.85rem;
-  color: #1e40af;
-  border-bottom: 1px solid #e5e7eb;
+  color: var(--graph-label-text);
+  border-bottom: 1px solid var(--border);
 }
 
-/* Widen assistant bubbles that contain graphs */
 .message-bubble.has-graph {
   max-width: 90%;
   white-space: normal;
 }
 
-/* Slider controls for parameterized graphs */
 .graph-sliders {
   padding: 8px 12px;
-  background: #f8fafc;
-  border-top: 1px solid #e5e7eb;
+  background: var(--graph-sliders-bg);
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -240,20 +591,20 @@ body {
 .graph-slider-row label {
   font-weight: 600;
   min-width: 24px;
-  color: #1e40af;
+  color: var(--graph-slider-label);
 }
 
 .graph-slider-row input[type="range"] {
   flex: 1;
   cursor: pointer;
-  accent-color: #2563eb;
+  accent-color: var(--btn-primary);
 }
 
 .graph-slider-row .slider-value {
   min-width: 40px;
   text-align: right;
   font-family: monospace;
-  color: #4b5563;
+  color: var(--slider-value-text);
 }
 
 .graph-error {
@@ -263,28 +614,29 @@ body {
   font-size: 0.9rem;
 }
 
-/* Login overlay */
+/* ============================================================
+   LOGIN OVERLAY
+   ============================================================ */
 .login-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #f4f7fb;
+  inset: 0;
+  background: var(--login-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  transition: background 0.2s;
 }
 
 .login-card {
-  background: #ffffff;
+  background: var(--login-card-bg);
   border-radius: 16px;
   padding: 40px 32px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow);
   text-align: center;
   max-width: 400px;
   width: 90%;
+  transition: background 0.2s;
 }
 
 .login-card h1 {
@@ -293,7 +645,7 @@ body {
 }
 
 .login-subtitle {
-  color: #4b5563;
+  color: var(--subtitle-color);
   margin-bottom: 24px;
   line-height: 1.5;
 }
@@ -308,14 +660,17 @@ body {
   width: 100%;
   padding: 14px;
   font-size: 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-input);
   border-radius: 10px;
   text-align: center;
+  background: var(--textarea-bg);
+  color: var(--textarea-text);
+  transition: background 0.2s, color 0.2s;
 }
 
 .login-input:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--btn-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
@@ -330,8 +685,32 @@ body {
   font-size: 0.9rem;
 }
 
+/* ============================================================
+   SUBSCRIPT TOGGLE ACTIVE STATE
+   ============================================================ */
 #subscript-toggle.active {
-  background: #2563eb;
+  background: var(--btn-primary);
   color: white;
-  border-color: #2563eb;
+  border-color: var(--btn-primary);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 640px) {
+  .card {
+    padding: 18px;
+  }
+
+  .message-bubble {
+    max-width: 92%;
+  }
+
+  .button {
+    width: 100%;
+  }
+
+  .header-top h1 {
+    font-size: 1.5rem;
+  }
 }
