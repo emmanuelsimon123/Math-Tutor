@@ -167,6 +167,10 @@ function applyKatex(el) {
 // ============================================================
 let graphCounter = 0;
 
+// Default canvas dimensions used when an SVG has no intrinsic width/height.
+const DEFAULT_CANVAS_WIDTH  = 400;
+const DEFAULT_CANVAS_HEIGHT = 300;
+
 // Allowlist of safe characters for graph expressions.
 // This prevents passing arbitrary code to functionPlot's eval-like parser.
 const SAFE_EXPRESSION_RE = /^[a-zA-Z0-9+\-*/^()._,\s]*$/;
@@ -730,38 +734,257 @@ userInput.addEventListener("paste", (e) => {
 // ============================================================
 // DOWNLOAD CHAT
 // ============================================================
-downloadButton.addEventListener("click", () => {
+
+/**
+ * Serializes an SVG element to a PNG data URL using an offscreen canvas.
+ * Returns a Promise that resolves with the data URL string.
+ */
+function svgToPngDataUrl(svgElement) {
+  return new Promise((resolve) => {
+    const serializer = new XMLSerializer();
+    let svgString = serializer.serializeToString(svgElement);
+    // Ensure xmlns attribute is present so the browser can parse the SVG as an image.
+    if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
+      svgString = svgString.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width || DEFAULT_CANVAS_WIDTH;
+      canvas.height = img.height || DEFAULT_CANVAS_HEIGHT;
+      const ctx = canvas.getContext("2d");
+      // White background so transparent SVG areas look clean.
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(svgUrl);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      resolve(null);
+    };
+    img.src = svgUrl;
+  });
+}
+
+/**
+ * Captures every .graph-container in the chat as a PNG data URL.
+ * Returns a Promise that resolves with a Map<graphContainerId, pngDataUrl>.
+ */
+async function captureGraphImages() {
+  const graphMap = new Map();
+  const containers = Array.from(chat.querySelectorAll(".graph-container"));
+  await Promise.all(containers.map(async (container) => {
+    const svgEl = container.querySelector("svg");
+    if (svgEl) {
+      const dataUrl = await svgToPngDataUrl(svgEl);
+      if (dataUrl) graphMap.set(container.id, dataUrl);
+    }
+  }));
+  return graphMap;
+}
+
+/**
+ * Escapes a string for safe inclusion in HTML text content.
+ */
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Builds a self-contained HTML export of the current conversation.
+ * @param {Map<string, string>} graphMap  Map of graph container id → PNG data URL.
+ * @returns {string}  Full HTML document as a string.
+ */
+function buildExportHtml(graphMap) {
+  // Track which graph containers map to messages; we scan the DOM to resolve
+  // [GRAPH: ...] tags in assistant messages to the right captured image.
+  const graphContainerIds = Array.from(chat.querySelectorAll(".graph-container")).map(el => el.id);
+  let graphIdxCursor = 0;
+
+  const timestamp = new Date().toLocaleString();
+
+  const messageBubbles = messages.map(msg => {
+    const isUser = msg.role === "user";
+    const bubbleClass = isUser ? "bubble user-bubble" : "bubble assistant-bubble";
+
+    let innerHtml = "";
+
+    if (isUser) {
+      if (Array.isArray(msg.content)) {
+        msg.content.forEach(part => {
+          if (part.type === "text" && part.text) {
+            innerHtml += `<p>${escapeHtml(part.text)}</p>`;
+          } else if (part.type === "image_url" && part.image_url && part.image_url.url) {
+            innerHtml += `<img src="${part.image_url.url}" alt="Uploaded image" class="chat-img" />`;
+          }
+        });
+      } else {
+        innerHtml += `<p>${escapeHtml(typeof msg.content === "string" ? msg.content : "")}</p>`;
+      }
+    } else {
+      // Assistant message: replace [GRAPH: ...] tags with captured <img> elements.
+      const rawText = typeof msg.content === "string" ? msg.content : "";
+      const graphTagRegex = /\[GRAPH:\s*(.+?)\]/g;
+      let lastIdx = 0;
+      let gMatch;
+      while ((gMatch = graphTagRegex.exec(rawText)) !== null) {
+        // Text before this graph tag
+        if (gMatch.index > lastIdx) {
+          innerHtml += `<p>${escapeHtml(rawText.slice(lastIdx, gMatch.index)).replace(/\n/g, "<br>")}</p>`;
+        }
+        // Replace with captured PNG if available, otherwise show label
+        const containerId = graphContainerIds[graphIdxCursor] || null;
+        const pngDataUrl = containerId ? graphMap.get(containerId) : null;
+        if (pngDataUrl) {
+          // Split on '|' to extract the expression before any optional slider parameters.
+          const expr = escapeHtml(gMatch[1].trim().split("|")[0].trim());
+          innerHtml += `<figure class="graph-figure"><img src="${pngDataUrl}" alt="Graph of ${expr}" class="graph-img" /><figcaption>y = ${expr}</figcaption></figure>`;
+        } else {
+          innerHtml += `<p><em>[Graph: ${escapeHtml(gMatch[1].trim())}]</em></p>`;
+        }
+        graphIdxCursor++;
+        lastIdx = gMatch.index + gMatch[0].length;
+      }
+      // Remaining text after the last graph tag
+      if (lastIdx < rawText.length) {
+        innerHtml += `<p>${escapeHtml(rawText.slice(lastIdx)).replace(/\n/g, "<br>")}</p>`;
+      }
+    }
+
+    const label = isUser ? "You" : "Math Tutor";
+    return `<div class="message-row ${isUser ? "user-row" : "assistant-row"}">
+  <div class="role-label">${label}</div>
+  <div class="${bubbleClass}">${innerHtml}</div>
+</div>`;
+  });
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Math Tutor &mdash; Conversation Export</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f3f4f6;
+    color: #111827;
+    padding: 24px 16px 48px;
+    line-height: 1.6;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: #1e3a8a;
+  }
+  .chat-export {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .message-row {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+  }
+  .user-row { align-self: flex-end; align-items: flex-end; }
+  .assistant-row { align-self: flex-start; align-items: flex-start; }
+  .role-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    color: #6b7280;
+  }
+  .bubble {
+    border-radius: 16px;
+    padding: 10px 14px;
+    word-break: break-word;
+  }
+  .user-bubble {
+    background: #2563eb;
+    color: #ffffff;
+    border-bottom-right-radius: 4px;
+  }
+  .assistant-bubble {
+    background: #f9fafb;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    border-bottom-left-radius: 4px;
+  }
+  .bubble p { margin: 4px 0; }
+  .bubble p:first-child { margin-top: 0; }
+  .bubble p:last-child { margin-bottom: 0; }
+  .chat-img {
+    display: block;
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    margin-top: 6px;
+  }
+  .graph-figure {
+    margin: 8px 0;
+    text-align: center;
+  }
+  .graph-img {
+    display: block;
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+  figcaption {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 4px;
+  }
+  footer {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 0.8rem;
+    color: #9ca3af;
+  }
+</style>
+</head>
+<body>
+<h1>AI Math Tutor &mdash; Conversation Export</h1>
+<div class="chat-export">
+${messageBubbles.join("\n")}
+</div>
+<footer>Exported on ${escapeHtml(timestamp)}</footer>
+</body>
+</html>`;
+}
+
+downloadButton.addEventListener("click", async () => {
   if (messages.length === 0) {
     statusDiv.textContent = "No conversation to download yet.";
     statusDiv.classList.add("error");
     return;
   }
 
-  const lines = messages.map(msg => {
-    const role = msg.role === "user" ? "You" : "Math Tutor";
-    let text;
-    if (typeof msg.content === "string") {
-      text = msg.content;
-    } else if (Array.isArray(msg.content)) {
-      const textParts = msg.content.filter(c => c.type === "text").map(c => c.text);
-      const hasImage = msg.content.some(c => c.type === "image_url");
-      text = (hasImage ? "[Image attached] " : "") + textParts.join("");
-    } else {
-      text = "";
-    }
-    return role + ":\n" + text;
-  });
+  // Capture all graph SVGs as PNG data URLs before building the HTML.
+  const graphMap = await captureGraphImages();
 
-  const fullText =
-    "AI Math Tutor Conversation\n" +
-    "=".repeat(30) + "\n\n" +
-    lines.join("\n\n---\n\n");
-
-  const blob = new Blob([fullText], { type: "text/plain" });
+  const html = buildExportHtml(graphMap);
+  const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "math-tutor-chat.txt";
+  a.download = "math-tutor-chat.html";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
