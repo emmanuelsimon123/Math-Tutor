@@ -167,6 +167,176 @@ function applyKatex(el) {
 // ============================================================
 let graphCounter = 0;
 
+// ============================================================
+// TRIANGLE DIAGRAM UTILITIES
+// ============================================================
+
+/**
+ * Parses a [TRIANGLE: ...] tag body into a key/value parameter object.
+ * Example input: "a=1, b=√3, c=2, A=30°, B=60°, C=90°"
+ * Returns: { a: "1", b: "√3", c: "2", A: "30°", B: "60°", C: "90°" }
+ */
+function parseTriangleParams(raw) {
+  const params = {};
+  for (const pair of raw.split(",")) {
+    const m = pair.trim().match(/^([a-zA-Z]+)\s*=\s*(.+)$/);
+    if (m) params[m[1]] = m[2].trim();
+  }
+  return params;
+}
+
+/**
+ * Parses a triangle parameter value to a number.
+ * Handles plain numbers, √n, m√n, and simple fractions like 1/2.
+ * Returns NaN if the value cannot be parsed numerically.
+ */
+function parseTriangleNum(s) {
+  if (!s) return NaN;
+  s = String(s).replace(/°$/, "").trim();
+  // m√n  (e.g. "2√3", "√2", "3√5")
+  const sqrtMatch = s.match(/^(\d*\.?\d*)√(\d+\.?\d*)$/);
+  if (sqrtMatch) {
+    const coefficient = sqrtMatch[1] ? parseFloat(sqrtMatch[1]) : 1;
+    return coefficient * Math.sqrt(parseFloat(sqrtMatch[2]));
+  }
+  // Simple fraction (e.g. "1/2")
+  const fracMatch = s.match(/^(\d+)\/(\d+)$/);
+  if (fracMatch) return parseFloat(fracMatch[1]) / parseFloat(fracMatch[2]);
+  return parseFloat(s);
+}
+
+/**
+ * Builds an inline SVG element representing a labeled right triangle.
+ *
+ * Geometric convention (matches standard geometry textbooks):
+ *   - C is the right-angle vertex (marked with a square corner symbol)
+ *   - A and B are the two acute-angle vertices
+ *   - a = side BC (the leg opposite angle A)
+ *   - b = side AC (the leg opposite angle B)
+ *   - c = side AB (the hypotenuse, opposite the right angle C)
+ *
+ * For visual clarity, C is placed at the bottom-left, A at the bottom-right,
+ * and B at the top-left, so the right angle is in the lower-left corner.
+ *
+ * @param {Object} params - keys: a, b, c (side labels), A, B, C (angle labels)
+ * @returns {SVGElement}
+ */
+function drawTriangleSVG(params) {
+  const aNum = parseTriangleNum(params.a);
+  const bNum = parseTriangleNum(params.b);
+
+  const SVG_W = 280;
+  const SVG_H = 200;
+  const PAD   = 44; // space around triangle for labels
+
+  const drawW = SVG_W - 2 * PAD; // 192 px available
+  const drawH = SVG_H - 2 * PAD; // 112 px available
+
+  let aPx, bPx; // pixel lengths of the two legs
+  if (!isNaN(aNum) && !isNaN(bNum) && aNum > 0 && bNum > 0) {
+    const scale = Math.min(drawW / bNum, drawH / aNum);
+    aPx = aNum * scale;
+    bPx = bNum * scale;
+  } else if (!isNaN(aNum) && aNum > 0 && isNaN(bNum)) {
+    // Only vertical leg known — fill available height and use a reasonable width
+    aPx = drawH;
+    bPx = drawW;
+  } else if (!isNaN(bNum) && bNum > 0 && isNaN(aNum)) {
+    // Only horizontal leg known — fill available width and use a reasonable height
+    aPx = drawH;
+    bPx = drawW;
+  } else {
+    // No numeric side info — draw a sensible default shape
+    aPx = drawH * 0.7;
+    bPx = drawW * 0.8;
+  }
+
+  // Centre the drawing within the canvas
+  const xOff = PAD + (drawW - bPx) / 2;
+  const yOff = PAD + (drawH - aPx) / 2;
+
+  // Vertex coordinates (SVG y increases downward)
+  const vC = { x: xOff,        y: yOff + aPx }; // right-angle vertex (bottom-left)
+  const vA = { x: xOff + bPx,  y: yOff + aPx }; // bottom-right
+  const vB = { x: xOff,        y: yOff        }; // top-left
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("width",   SVG_W);
+  svg.setAttribute("height",  SVG_H);
+  svg.setAttribute("viewBox", `0 0 ${SVG_W} ${SVG_H}`);
+  svg.setAttribute("class",   "triangle-svg");
+
+  // Triangle outline
+  const poly = document.createElementNS(svgNS, "polygon");
+  poly.setAttribute("points", `${vC.x},${vC.y} ${vA.x},${vA.y} ${vB.x},${vB.y}`);
+  poly.setAttribute("fill",         "none");
+  poly.setAttribute("stroke",       "currentColor");
+  poly.setAttribute("stroke-width", "2");
+  svg.appendChild(poly);
+
+  // Right-angle square marker at C
+  const sq = 10;
+  const sqPath = document.createElementNS(svgNS, "path");
+  sqPath.setAttribute("d",
+    `M ${vC.x},${vC.y - sq} L ${vC.x + sq},${vC.y - sq} L ${vC.x + sq},${vC.y}`);
+  sqPath.setAttribute("fill",         "none");
+  sqPath.setAttribute("stroke",       "currentColor");
+  sqPath.setAttribute("stroke-width", "1.5");
+  svg.appendChild(sqPath);
+
+  // Helper — append a <text> element
+  function addText(x, y, text, anchor, fill) {
+    const t = document.createElementNS(svgNS, "text");
+    t.setAttribute("x",                x);
+    t.setAttribute("y",                y);
+    t.setAttribute("text-anchor",      anchor || "middle");
+    t.setAttribute("dominant-baseline","auto");
+    t.setAttribute("font-family",      "monospace");
+    t.setAttribute("font-size",        "13");
+    if (fill) t.setAttribute("fill", fill);
+    t.textContent = text;
+    svg.appendChild(t);
+  }
+
+  // Side labels
+  if (params.a) {
+    // Side a = BC: left vertical leg — label to the left
+    addText(vC.x - 8, (vC.y + vB.y) / 2, `a = ${params.a}`, "end");
+  }
+  if (params.b) {
+    // Side b = AC: bottom horizontal leg — label below
+    addText((vC.x + vA.x) / 2, vC.y + 18, `b = ${params.b}`, "middle");
+  }
+  if (params.c) {
+    // Side c = AB: hypotenuse — label offset perpendicular to the line
+    const midX = (vA.x + vB.x) / 2;
+    const midY = (vA.y + vB.y) / 2;
+    const dx = vB.x - vA.x;
+    const dy = vB.y - vA.y;
+    const len = Math.hypot(dx, dy);
+    const perpX = (-dy / len) * 18;
+    const perpY = ( dx / len) * 18;
+    addText(midX + perpX, midY + perpY + 5, `c = ${params.c}`, "middle");
+  }
+
+  // Angle labels (rendered in blue to distinguish from side labels)
+  if (params.A) {
+    // Angle A at bottom-right vertex — label slightly up and left
+    addText(vA.x - 14, vA.y - 8, params.A, "end", "#2563eb");
+  }
+  if (params.B) {
+    // Angle B at top-left vertex — label slightly right and down
+    addText(vB.x + 8, vB.y + 18, params.B, "start", "#2563eb");
+  }
+  if (params.C) {
+    // Angle C at bottom-left (right-angle) vertex — label next to the square
+    addText(vC.x + 16, vC.y - 16, params.C, "start", "#2563eb");
+  }
+
+  return svg;
+}
+
 // Default canvas dimensions used when an SVG has no intrinsic width/height.
 const DEFAULT_CANVAS_WIDTH  = 400;
 const DEFAULT_CANVAS_HEIGHT = 300;
@@ -288,23 +458,29 @@ function renderMessageBubble(role, content) {
 
 /**
  * Renders an assistant response into bubbleEl.
- * Handles [GRAPH: ...] tags, KaTeX, and safe markdown.
+ * Handles [GRAPH: ...] and [TRIANGLE: ...] tags, KaTeX, and safe markdown.
  */
 function renderAssistantContent(bubbleEl, content) {
-  const graphRegex = /\[GRAPH:\s*(.+?)\]/g;
-  const graphs = [];
+  // Collect all special tags ([GRAPH: ...] and [TRIANGLE: ...]) in document order.
+  const tagRegex = /\[(GRAPH|TRIANGLE):\s*(.+?)\]/g;
+  const tags = [];
   let match;
-  while ((match = graphRegex.exec(content)) !== null) {
-    graphs.push({ fullMatch: match[0], raw: match[1].trim(), index: match.index });
+  while ((match = tagRegex.exec(content)) !== null) {
+    tags.push({
+      type:      match[1],       // "GRAPH" or "TRIANGLE"
+      fullMatch: match[0],
+      raw:       match[2].trim(),
+      index:     match.index
+    });
   }
 
-  if (graphs.length > 0) {
+  if (tags.length > 0) {
     bubbleEl.classList.add("has-graph");
     let lastIndex = 0;
 
-    graphs.forEach(graph => {
-      // Text segment before this graph tag
-      const textBefore = content.slice(lastIndex, graph.index);
+    tags.forEach(tag => {
+      // Text segment before this tag
+      const textBefore = content.slice(lastIndex, tag.index);
       if (textBefore.trim()) {
         const textEl = document.createElement("div");
         renderFormattedText(textBefore, textEl);
@@ -312,86 +488,97 @@ function renderAssistantContent(bubbleEl, content) {
         bubbleEl.appendChild(textEl);
       }
 
-      // Parse "expression | param1=default:min:max | ..."
-      const parts = graph.raw.split("|").map(s => s.trim());
-      const expression = parts[0];
+      if (tag.type === "GRAPH") {
+        // ── Graph tag ──────────────────────────────────────────────────────────
+        // Parse "expression | param1=default:min:max | ..."
+        const parts = tag.raw.split("|").map(s => s.trim());
+        const expression = parts[0];
 
-      // Validate expression against allowlist before passing to functionPlot
-      if (!isSafeExpression(expression)) {
-        const errorEl = document.createElement("div");
-        errorEl.className = "graph-error";
-        errorEl.textContent = "This graph couldn\u2019t be displayed \u2014 the expression contains unexpected characters. Only letters, numbers, and basic math operators (+, -, *, /, ^) are allowed.";
-        bubbleEl.appendChild(errorEl);
-        lastIndex = graph.index + graph.fullMatch.length;
-        return;
-      }
-
-      const params = [];
-      for (let p = 1; p < parts.length; p++) {
-        const paramMatch = parts[p].match(/^(\w+)=(-?[\d.]+):(-?[\d.]+):(-?[\d.]+)$/);
-        if (paramMatch) {
-          params.push({
-            name: paramMatch[1],
-            default: parseFloat(paramMatch[2]),
-            min: parseFloat(paramMatch[3]),
-            max: parseFloat(paramMatch[4])
-          });
+        // Validate expression against allowlist before passing to functionPlot
+        if (!isSafeExpression(expression)) {
+          const errorEl = document.createElement("div");
+          errorEl.className = "graph-error";
+          errorEl.textContent = "This graph couldn\u2019t be displayed \u2014 the expression contains unexpected characters. Only letters, numbers, and basic math operators (+, -, *, /, ^) are allowed.";
+          bubbleEl.appendChild(errorEl);
+          lastIndex = tag.index + tag.fullMatch.length;
+          return;
         }
+
+        const params = [];
+        for (let p = 1; p < parts.length; p++) {
+          const paramMatch = parts[p].match(/^(\w+)=(-?[\d.]+):(-?[\d.]+):(-?[\d.]+)$/);
+          if (paramMatch) {
+            params.push({
+              name:    paramMatch[1],
+              default: parseFloat(paramMatch[2]),
+              min:     parseFloat(paramMatch[3]),
+              max:     parseFloat(paramMatch[4])
+            });
+          }
+        }
+
+        // Label above the graph
+        const labelEl = document.createElement("div");
+        labelEl.className = "graph-label";
+        labelEl.textContent = "y = " + expression;
+        bubbleEl.appendChild(labelEl);
+
+        // Graph container
+        const graphId = "graph-" + Date.now() + "-" + (graphCounter++);
+        const graphDiv = document.createElement("div");
+        graphDiv.className = "graph-container";
+        graphDiv.id = graphId;
+        graphDiv.dataset.expression = expression;
+        graphDiv.dataset.params = JSON.stringify(params);
+        bubbleEl.appendChild(graphDiv);
+
+        // Slider controls (only when parameters exist)
+        if (params.length > 0) {
+          const slidersDiv = document.createElement("div");
+          slidersDiv.className = "graph-sliders";
+          slidersDiv.dataset.graphId = graphId;
+
+          params.forEach(param => {
+            const row = document.createElement("div");
+            row.className = "graph-slider-row";
+
+            const label = document.createElement("label");
+            label.textContent = param.name;
+            row.appendChild(label);
+
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = param.min;
+            slider.max = param.max;
+            slider.step = 0.1;
+            slider.value = param.default;
+            slider.dataset.paramName = param.name;
+            row.appendChild(slider);
+
+            const valueDisplay = document.createElement("span");
+            valueDisplay.className = "slider-value";
+            valueDisplay.textContent = param.default;
+            row.appendChild(valueDisplay);
+
+            slidersDiv.appendChild(row);
+          });
+
+          bubbleEl.appendChild(slidersDiv);
+        }
+      } else if (tag.type === "TRIANGLE") {
+        // ── Triangle diagram tag ───────────────────────────────────────────────
+        const triParams = parseTriangleParams(tag.raw);
+        const container = document.createElement("div");
+        container.className = "triangle-container";
+        const svgEl = drawTriangleSVG(triParams);
+        container.appendChild(svgEl);
+        bubbleEl.appendChild(container);
       }
 
-      // Label above the graph
-      const labelEl = document.createElement("div");
-      labelEl.className = "graph-label";
-      labelEl.textContent = "y = " + expression;
-      bubbleEl.appendChild(labelEl);
-
-      // Graph container
-      const graphId = "graph-" + Date.now() + "-" + (graphCounter++);
-      const graphDiv = document.createElement("div");
-      graphDiv.className = "graph-container";
-      graphDiv.id = graphId;
-      graphDiv.dataset.expression = expression;
-      graphDiv.dataset.params = JSON.stringify(params);
-      bubbleEl.appendChild(graphDiv);
-
-      // Slider controls (only when parameters exist)
-      if (params.length > 0) {
-        const slidersDiv = document.createElement("div");
-        slidersDiv.className = "graph-sliders";
-        slidersDiv.dataset.graphId = graphId;
-
-        params.forEach(param => {
-          const row = document.createElement("div");
-          row.className = "graph-slider-row";
-
-          const label = document.createElement("label");
-          label.textContent = param.name;
-          row.appendChild(label);
-
-          const slider = document.createElement("input");
-          slider.type = "range";
-          slider.min = param.min;
-          slider.max = param.max;
-          slider.step = 0.1;
-          slider.value = param.default;
-          slider.dataset.paramName = param.name;
-          row.appendChild(slider);
-
-          const valueDisplay = document.createElement("span");
-          valueDisplay.className = "slider-value";
-          valueDisplay.textContent = param.default;
-          row.appendChild(valueDisplay);
-
-          slidersDiv.appendChild(row);
-        });
-
-        bubbleEl.appendChild(slidersDiv);
-      }
-
-      lastIndex = graph.index + graph.fullMatch.length;
+      lastIndex = tag.index + tag.fullMatch.length;
     });
 
-    // Text segment after the last graph tag
+    // Text segment after the last tag
     const textAfter = content.slice(lastIndex);
     if (textAfter.trim()) {
       const textEl = document.createElement("div");
@@ -400,13 +587,13 @@ function renderAssistantContent(bubbleEl, content) {
       bubbleEl.appendChild(textEl);
     }
   } else {
-    // No graphs — render with safe markdown and KaTeX
+    // No special tags — render with safe markdown and KaTeX
     renderFormattedText(content, bubbleEl);
     applyKatex(bubbleEl);
   }
 
-  // Render any graphs after the elements are in the DOM so Function Plot can
-  // measure container dimensions correctly.
+  // Render any function-plot graphs after the elements are in the DOM so
+  // Function Plot can measure container dimensions correctly.
   if (bubbleEl.classList.contains("has-graph")) {
     waitForFunctionPlot().then(() => {
       requestAnimationFrame(() => {
@@ -830,30 +1017,46 @@ function buildExportHtml(graphMap) {
         innerHtml += `<p>${escapeHtml(typeof msg.content === "string" ? msg.content : "")}</p>`;
       }
     } else {
-      // Assistant message: replace [GRAPH: ...] tags with captured <img> elements.
+      // Assistant message: replace [GRAPH: ...] and [TRIANGLE: ...] tags.
       const rawText = typeof msg.content === "string" ? msg.content : "";
-      const graphTagRegex = /\[GRAPH:\s*(.+?)\]/g;
+      const specialTagRegex = /\[(GRAPH|TRIANGLE):\s*(.+?)\]/g;
       let lastIdx = 0;
-      let gMatch;
-      while ((gMatch = graphTagRegex.exec(rawText)) !== null) {
-        // Text before this graph tag
-        if (gMatch.index > lastIdx) {
-          innerHtml += `<p>${escapeHtml(rawText.slice(lastIdx, gMatch.index)).replace(/\n/g, "<br>")}</p>`;
+      let sMatch;
+      while ((sMatch = specialTagRegex.exec(rawText)) !== null) {
+        // Text before this tag
+        if (sMatch.index > lastIdx) {
+          innerHtml += `<p>${escapeHtml(rawText.slice(lastIdx, sMatch.index)).replace(/\n/g, "<br>")}</p>`;
         }
-        // Replace with captured PNG if available, otherwise show label
-        const containerId = graphContainerIds[graphIdxCursor] || null;
-        const pngDataUrl = containerId ? graphMap.get(containerId) : null;
-        if (pngDataUrl) {
-          // Split on '|' to extract the expression before any optional slider parameters.
-          const expr = escapeHtml(gMatch[1].trim().split("|")[0].trim());
-          innerHtml += `<figure class="graph-figure"><img src="${pngDataUrl}" alt="Graph of ${expr}" class="graph-img" /><figcaption>y = ${expr}</figcaption></figure>`;
-        } else {
-          innerHtml += `<p><em>[Graph: ${escapeHtml(gMatch[1].trim())}]</em></p>`;
+        if (sMatch[1] === "GRAPH") {
+          // Replace with captured PNG if available, otherwise show label
+          const containerId = graphContainerIds[graphIdxCursor] || null;
+          const pngDataUrl = containerId ? graphMap.get(containerId) : null;
+          if (pngDataUrl) {
+            // Split on '|' to extract the expression before any optional slider parameters.
+            const expr = escapeHtml(sMatch[2].trim().split("|")[0].trim());
+            innerHtml += `<figure class="graph-figure"><img src="${pngDataUrl}" alt="Graph of ${expr}" class="graph-img" /><figcaption>y = ${expr}</figcaption></figure>`;
+          } else {
+            innerHtml += `<p><em>[Graph: ${escapeHtml(sMatch[2].trim())}]</em></p>`;
+          }
+          graphIdxCursor++;
+        } else if (sMatch[1] === "TRIANGLE") {
+          // Inline the SVG directly into the export HTML
+          try {
+            const triParams = parseTriangleParams(sMatch[2].trim());
+            const svgEl = drawTriangleSVG(triParams);
+            const serializer = new XMLSerializer();
+            let svgString = serializer.serializeToString(svgEl);
+            if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
+              svgString = svgString.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+            }
+            innerHtml += `<div class="triangle-figure">${svgString}</div>`;
+          } catch {
+            innerHtml += `<p><em>[Triangle: ${escapeHtml(sMatch[2].trim())}]</em></p>`;
+          }
         }
-        graphIdxCursor++;
-        lastIdx = gMatch.index + gMatch[0].length;
+        lastIdx = sMatch.index + sMatch[0].length;
       }
-      // Remaining text after the last graph tag
+      // Remaining text after the last tag
       if (lastIdx < rawText.length) {
         innerHtml += `<p>${escapeHtml(rawText.slice(lastIdx)).replace(/\n/g, "<br>")}</p>`;
       }
@@ -946,6 +1149,15 @@ function buildExportHtml(graphMap) {
     border-radius: 8px;
     border: 1px solid #e5e7eb;
   }
+  .triangle-figure {
+    display: inline-block;
+    margin: 8px 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px;
+    background: #f9fafb;
+  }
+  .triangle-figure svg { display: block; }
   figcaption {
     font-size: 0.8rem;
     color: #6b7280;
