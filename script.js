@@ -337,6 +337,366 @@ function drawTriangleSVG(params) {
   return svg;
 }
 
+// ============================================================
+// SHAPE DIAGRAM UTILITIES
+// ============================================================
+
+/**
+ * Parses a [SHAPE: ...] tag body into a key/value parameter object.
+ * Example input: "type=polygon, sides=6, label=Regular Hexagon"
+ * Returns: { type: "polygon", sides: "6", label: "Regular Hexagon" }
+ */
+function parseShapeParams(raw) {
+  const params = {};
+  // Support values with spaces (e.g. label=Regular Hexagon)
+  for (const pair of raw.split(",")) {
+    const m = pair.trim().match(/^([a-zA-Z_]+)\s*=\s*(.+)$/);
+    if (m) params[m[1].trim()] = m[2].trim();
+  }
+  return params;
+}
+
+/**
+ * Shared SVG setup helper — creates a 280×200 SVG element.
+ */
+function makeSVG() {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("width",   "280");
+  svg.setAttribute("height",  "200");
+  svg.setAttribute("viewBox", "0 0 280 200");
+  svg.setAttribute("class",   "shape-svg");
+  return { svg, svgNS };
+}
+
+/**
+ * Appends a <text> element to an SVG.
+ */
+function svgText(svgNS, svg, x, y, text, anchor, opts) {
+  const t = document.createElementNS(svgNS, "text");
+  t.setAttribute("x", x);
+  t.setAttribute("y", y);
+  t.setAttribute("text-anchor", anchor || "middle");
+  t.setAttribute("dominant-baseline", "auto");
+  t.setAttribute("font-family", "monospace");
+  t.setAttribute("font-size", (opts && opts.fontSize) || "13");
+  if (opts && opts.fill) t.setAttribute("fill", opts.fill);
+  t.textContent = text;
+  svg.appendChild(t);
+}
+
+/**
+ * Draws a regular N-sided polygon SVG.
+ * Vertices are evenly spaced around a center point; first vertex points up.
+ *
+ * @param {number} n      - Number of sides (3–10)
+ * @param {string} label  - Shape name to display (e.g. "Regular Hexagon")
+ * @returns {SVGElement}
+ */
+function drawRegularPolygonSVG(n, label) {
+  const { svg, svgNS } = makeSVG();
+  const cx = 140, cy = 95, r = 72;
+
+  const points = [];
+  for (let i = 0; i < n; i++) {
+    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+    points.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+  }
+
+  const poly = document.createElementNS(svgNS, "polygon");
+  poly.setAttribute("points", points.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" "));
+  poly.setAttribute("fill", "none");
+  poly.setAttribute("stroke", "currentColor");
+  poly.setAttribute("stroke-width", "2");
+  svg.appendChild(poly);
+
+  // Vertex labels (A, B, C, …)
+  const letters = "ABCDEFGHIJ";
+  points.forEach((p, i) => {
+    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+    const lx = cx + (r + 14) * Math.cos(angle);
+    const ly = cy + (r + 14) * Math.sin(angle);
+    svgText(svgNS, svg, lx.toFixed(1), (ly + 4).toFixed(1), letters[i], "middle");
+  });
+
+  // Shape name label at the bottom
+  const displayLabel = label || `Regular ${n}-gon`;
+  svgText(svgNS, svg, 140, 192, displayLabel, "middle", { fontSize: "11" });
+
+  return svg;
+}
+
+/**
+ * Draws a circle SVG with a radius line and labels.
+ *
+ * @param {Object} params - keys: r (radius label), label
+ * @returns {SVGElement}
+ */
+function drawCircleSVG(params) {
+  const { svg, svgNS } = makeSVG();
+  const cx = 140, cy = 96, r = 72;
+
+  const circle = document.createElementNS(svgNS, "circle");
+  circle.setAttribute("cx", cx);
+  circle.setAttribute("cy", cy);
+  circle.setAttribute("r",  r);
+  circle.setAttribute("fill",         "none");
+  circle.setAttribute("stroke",       "currentColor");
+  circle.setAttribute("stroke-width", "2");
+  svg.appendChild(circle);
+
+  // Center dot
+  const dot = document.createElementNS(svgNS, "circle");
+  dot.setAttribute("cx", cx);
+  dot.setAttribute("cy", cy);
+  dot.setAttribute("r",  3);
+  dot.setAttribute("fill", "currentColor");
+  svg.appendChild(dot);
+
+  // Radius line from center to right edge
+  const line = document.createElementNS(svgNS, "line");
+  line.setAttribute("x1", cx);
+  line.setAttribute("y1", cy);
+  line.setAttribute("x2", cx + r);
+  line.setAttribute("y2", cy);
+  line.setAttribute("stroke",       "currentColor");
+  line.setAttribute("stroke-width", "1.5");
+  svg.appendChild(line);
+
+  // Center label
+  svgText(svgNS, svg, cx - 6, cy - 6, "O", "middle", { fontSize: "12" });
+
+  // Radius label
+  const rLabel = params.r ? `r = ${params.r}` : "r";
+  svgText(svgNS, svg, cx + r / 2, cy - 8, rLabel, "middle", { fontSize: "12" });
+
+  // Shape name
+  const displayLabel = params.label || "Circle";
+  svgText(svgNS, svg, 140, 192, displayLabel, "middle", { fontSize: "11" });
+
+  return svg;
+}
+
+/**
+ * Draws a rectangle SVG with width/height labels.
+ *
+ * @param {Object} params - keys: width, height, label
+ * @returns {SVGElement}
+ */
+function drawRectangleSVG(params) {
+  const { svg, svgNS } = makeSVG();
+
+  const rw = 180, rh = 110;
+  const rx = (280 - rw) / 2;   // 50
+  const ry = (200 - rh) / 2;   // 45
+
+  const rect = document.createElementNS(svgNS, "rect");
+  rect.setAttribute("x",      rx);
+  rect.setAttribute("y",      ry);
+  rect.setAttribute("width",  rw);
+  rect.setAttribute("height", rh);
+  rect.setAttribute("fill",         "none");
+  rect.setAttribute("stroke",       "currentColor");
+  rect.setAttribute("stroke-width", "2");
+  svg.appendChild(rect);
+
+  // Corner labels
+  const corners = [
+    { x: rx - 8,      y: ry - 6,       label: "A", anchor: "end"    },
+    { x: rx + rw + 8, y: ry - 6,       label: "B", anchor: "start"  },
+    { x: rx + rw + 8, y: ry + rh + 14, label: "C", anchor: "start"  },
+    { x: rx - 8,      y: ry + rh + 14, label: "D", anchor: "end"    },
+  ];
+  corners.forEach(c => svgText(svgNS, svg, c.x, c.y, c.label, c.anchor));
+
+  // Width label (below bottom edge)
+  const wLabel = params.width ? `width = ${params.width}` : "width";
+  svgText(svgNS, svg, 140, ry + rh + 30, wLabel, "middle", { fontSize: "12" });
+
+  // Height label (to the left of left edge, rotated)
+  const hLabel = params.height ? `height = ${params.height}` : "height";
+  const hText = document.createElementNS(svgNS, "text");
+  hText.setAttribute("x",                rx - 16);
+  hText.setAttribute("y",                ry + rh / 2);
+  hText.setAttribute("text-anchor",      "middle");
+  hText.setAttribute("dominant-baseline","middle");
+  hText.setAttribute("font-family",      "monospace");
+  hText.setAttribute("font-size",        "12");
+  hText.setAttribute("transform",        `rotate(-90, ${rx - 16}, ${ry + rh / 2})`);
+  hText.textContent = hLabel;
+  svg.appendChild(hText);
+
+  // Shape name
+  const displayLabel = params.label || "Rectangle";
+  svgText(svgNS, svg, 140, 196, displayLabel, "middle", { fontSize: "11" });
+
+  return svg;
+}
+
+/**
+ * Draws a line SVG with arrowheads on both ends to indicate infinite extent.
+ *
+ * @returns {SVGElement}
+ */
+function drawLineSVG() {
+  const { svg, svgNS } = makeSVG();
+
+  // Arrowhead marker definition
+  const defs = document.createElementNS(svgNS, "defs");
+  const makeMarker = (id, refX) => {
+    const marker = document.createElementNS(svgNS, "marker");
+    marker.setAttribute("id",          id);
+    marker.setAttribute("markerWidth",  "8");
+    marker.setAttribute("markerHeight", "8");
+    marker.setAttribute("refX",        refX);
+    marker.setAttribute("refY",        "3");
+    marker.setAttribute("orient",      "auto");
+    const path = document.createElementNS(svgNS, "path");
+    path.setAttribute("d",    "M0,0 L0,6 L8,3 Z");
+    path.setAttribute("fill", "currentColor");
+    marker.appendChild(path);
+    return marker;
+  };
+  defs.appendChild(makeMarker("arrowRight", "8"));
+  defs.appendChild(makeMarker("arrowLeft",  "0"));
+  svg.appendChild(defs);
+
+  const line = document.createElementNS(svgNS, "line");
+  line.setAttribute("x1", 20);
+  line.setAttribute("y1", 100);
+  line.setAttribute("x2", 260);
+  line.setAttribute("y2", 100);
+  line.setAttribute("stroke",            "currentColor");
+  line.setAttribute("stroke-width",      "2");
+  line.setAttribute("marker-end",        "url(#arrowRight)");
+  line.setAttribute("marker-start",      "url(#arrowLeft)");
+  svg.appendChild(line);
+
+  // Two named points on the line
+  [[90, "A"], [190, "B"]].forEach(([x, lbl]) => {
+    const tick = document.createElementNS(svgNS, "line");
+    tick.setAttribute("x1", x);  tick.setAttribute("y1", 93);
+    tick.setAttribute("x2", x);  tick.setAttribute("y2", 107);
+    tick.setAttribute("stroke", "currentColor"); tick.setAttribute("stroke-width", "1.5");
+    svg.appendChild(tick);
+    svgText(svgNS, svg, x, 86, lbl, "middle");
+  });
+
+  svgText(svgNS, svg, 140, 130, "Line AB", "middle", { fontSize: "12" });
+  svgText(svgNS, svg, 140, 192, "Line (extends infinitely)", "middle", { fontSize: "11" });
+
+  return svg;
+}
+
+/**
+ * Draws a point SVG — a small filled dot with a label.
+ *
+ * @returns {SVGElement}
+ */
+function drawPointSVG() {
+  const { svg, svgNS } = makeSVG();
+
+  const dot = document.createElementNS(svgNS, "circle");
+  dot.setAttribute("cx",   140);
+  dot.setAttribute("cy",   96);
+  dot.setAttribute("r",    5);
+  dot.setAttribute("fill", "currentColor");
+  svg.appendChild(dot);
+
+  svgText(svgNS, svg, 140, 80, "P", "middle");
+  svgText(svgNS, svg, 140, 130, "Point P", "middle", { fontSize: "12" });
+  svgText(svgNS, svg, 140, 192, "Point (zero dimensions)", "middle", { fontSize: "11" });
+
+  return svg;
+}
+
+/**
+ * Draws a rhombus SVG (diamond orientation).
+ *
+ * @param {Object} params - keys: side, label
+ * @returns {SVGElement}
+ */
+function drawRhombusSVG(params) {
+  const { svg, svgNS } = makeSVG();
+
+  const cx = 140, cy = 96;
+  const hw = 100, hh = 68; // half-width and half-height
+
+  const points = [
+    { x: cx,      y: cy - hh }, // top
+    { x: cx + hw, y: cy      }, // right
+    { x: cx,      y: cy + hh }, // bottom
+    { x: cx - hw, y: cy      }, // left
+  ];
+
+  const poly = document.createElementNS(svgNS, "polygon");
+  poly.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(" "));
+  poly.setAttribute("fill",         "none");
+  poly.setAttribute("stroke",       "currentColor");
+  poly.setAttribute("stroke-width", "2");
+  svg.appendChild(poly);
+
+  // Vertex labels
+  const labels = [
+    { p: points[0], lbl: "A", anchor: "middle", dy: -8 },
+    { p: points[1], lbl: "B", anchor: "start",  dy:  4 },
+    { p: points[2], lbl: "C", anchor: "middle", dy: 18 },
+    { p: points[3], lbl: "D", anchor: "end",    dy:  4 },
+  ];
+  labels.forEach(({ p, lbl, anchor, dy }) => {
+    svgText(svgNS, svg, p.x, p.y + dy, lbl, anchor);
+  });
+
+  // Side label
+  if (params.side) {
+    svgText(svgNS, svg, cx + hw / 2 + 8, cy - hh / 2, `s = ${params.side}`, "start", { fontSize: "12" });
+  }
+
+  // Shape name
+  const displayLabel = params.label || "Rhombus";
+  svgText(svgNS, svg, 140, 192, displayLabel, "middle", { fontSize: "11" });
+
+  return svg;
+}
+
+/**
+ * Routes a parsed SHAPE params object to the correct drawing function.
+ *
+ * @param {Object} params - Parsed key/value pairs from [SHAPE: ...] tag
+ * @returns {SVGElement}
+ */
+function drawShapeSVG(params) {
+  const type = (params.type || "").toLowerCase();
+  switch (type) {
+    case "circle":
+      return drawCircleSVG(params);
+    case "rectangle":
+      return drawRectangleSVG(params);
+    case "rhombus":
+      return drawRhombusSVG(params);
+    case "square": {
+      // Render as a regular 4-sided polygon with a "Square" label
+      const svg = drawRegularPolygonSVG(4, params.label || (params.side ? `Square (side = ${params.side})` : "Square"));
+      return svg;
+    }
+    case "line":
+      return drawLineSVG();
+    case "point":
+      return drawPointSVG();
+    case "polygon": {
+      const n = parseInt(params.sides, 10);
+      if (!isNaN(n) && n >= 3 && n <= 10) {
+        return drawRegularPolygonSVG(n, params.label || `Regular ${n}-gon`);
+      }
+      // Fall back to a hexagon if sides is missing/invalid
+      return drawRegularPolygonSVG(6, params.label || "Regular Polygon");
+    }
+    default:
+      // Unknown type — draw a generic hexagon as a fallback
+      return drawRegularPolygonSVG(6, params.label || type || "Shape");
+  }
+}
+
 // Default canvas dimensions used when an SVG has no intrinsic width/height.
 const DEFAULT_CANVAS_WIDTH  = 400;
 const DEFAULT_CANVAS_HEIGHT = 300;
@@ -458,16 +818,16 @@ function renderMessageBubble(role, content) {
 
 /**
  * Renders an assistant response into bubbleEl.
- * Handles [GRAPH: ...] and [TRIANGLE: ...] tags, KaTeX, and safe markdown.
+ * Handles [GRAPH: ...], [TRIANGLE: ...], and [SHAPE: ...] tags, KaTeX, and safe markdown.
  */
 function renderAssistantContent(bubbleEl, content) {
-  // Collect all special tags ([GRAPH: ...] and [TRIANGLE: ...]) in document order.
-  const tagRegex = /\[(GRAPH|TRIANGLE):\s*(.+?)\]/g;
+  // Collect all special tags ([GRAPH: ...], [TRIANGLE: ...], [SHAPE: ...]) in document order.
+  const tagRegex = /\[(GRAPH|TRIANGLE|SHAPE):\s*(.+?)\]/g;
   const tags = [];
   let match;
   while ((match = tagRegex.exec(content)) !== null) {
     tags.push({
-      type:      match[1],       // "GRAPH" or "TRIANGLE"
+      type:      match[1],       // "GRAPH", "TRIANGLE", or "SHAPE"
       fullMatch: match[0],
       raw:       match[2].trim(),
       index:     match.index
@@ -571,6 +931,14 @@ function renderAssistantContent(bubbleEl, content) {
         const container = document.createElement("div");
         container.className = "triangle-container";
         const svgEl = drawTriangleSVG(triParams);
+        container.appendChild(svgEl);
+        bubbleEl.appendChild(container);
+      } else if (tag.type === "SHAPE") {
+        // ── Shape diagram tag ──────────────────────────────────────────────────
+        const shapeParams = parseShapeParams(tag.raw);
+        const container = document.createElement("div");
+        container.className = "triangle-container";
+        const svgEl = drawShapeSVG(shapeParams);
         container.appendChild(svgEl);
         bubbleEl.appendChild(container);
       }
@@ -1017,9 +1385,9 @@ function buildExportHtml(graphMap) {
         innerHtml += `<p>${escapeHtml(typeof msg.content === "string" ? msg.content : "")}</p>`;
       }
     } else {
-      // Assistant message: replace [GRAPH: ...] and [TRIANGLE: ...] tags.
+      // Assistant message: replace [GRAPH: ...], [TRIANGLE: ...], and [SHAPE: ...] tags.
       const rawText = typeof msg.content === "string" ? msg.content : "";
-      const specialTagRegex = /\[(GRAPH|TRIANGLE):\s*(.+?)\]/g;
+      const specialTagRegex = /\[(GRAPH|TRIANGLE|SHAPE):\s*(.+?)\]/g;
       let lastIdx = 0;
       let sMatch;
       while ((sMatch = specialTagRegex.exec(rawText)) !== null) {
@@ -1052,6 +1420,20 @@ function buildExportHtml(graphMap) {
             innerHtml += `<div class="triangle-figure">${svgString}</div>`;
           } catch {
             innerHtml += `<p><em>[Triangle: ${escapeHtml(sMatch[2].trim())}]</em></p>`;
+          }
+        } else if (sMatch[1] === "SHAPE") {
+          // Inline the shape SVG directly into the export HTML
+          try {
+            const shapeParams = parseShapeParams(sMatch[2].trim());
+            const svgEl = drawShapeSVG(shapeParams);
+            const serializer = new XMLSerializer();
+            let svgString = serializer.serializeToString(svgEl);
+            if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
+              svgString = svgString.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+            }
+            innerHtml += `<div class="triangle-figure">${svgString}</div>`;
+          } catch {
+            innerHtml += `<p><em>[Shape: ${escapeHtml(sMatch[2].trim())}]</em></p>`;
           }
         }
         lastIdx = sMatch.index + sMatch[0].length;
