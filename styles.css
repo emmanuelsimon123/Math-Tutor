@@ -615,8 +615,24 @@ body {
 }
 
 /* ============================================================
-   LOGIN OVERLAY
+   TRIANGLE DIAGRAM CONTAINERS
    ============================================================ */
+.triangle-container {
+  display: inline-block;
+  margin: 12px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  padding: 8px;
+}
+
+.triangle-svg {
+  display: block;
+  overflow: visible;
+}
+
+
 .login-overlay {
   position: fixed;
   inset: 0;
