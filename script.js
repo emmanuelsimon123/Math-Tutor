@@ -206,6 +206,84 @@ function parseTriangleNum(s) {
 }
 
 /**
+ * Examines parsed triangle parameters and returns a SHAPE params object if
+ * the parameters actually describe a non-triangle shape, or null if it is a
+ * genuine right triangle.
+ *
+ * This is a smart fallback for when the AI uses [TRIANGLE: ...] for shapes
+ * that it should have rendered with [SHAPE: ...].
+ *
+ * @param {Object} params - Parsed key/value pairs from a [TRIANGLE: ...] tag
+ * @returns {Object|null}  Shape params for drawShapeSVG(), or null for a real triangle
+ */
+function detectShapeFromTriangleParams(params) {
+  // If explicit shape-type params exist, treat as a SHAPE tag directly
+  if (params.type || params.sides || params.width || params.height || params.r) {
+    return params; // Already has shape params — pass through to drawShapeSVG
+  }
+
+  // Collect single-lowercase-letter side keys (a, b, c, d, …)
+  const sideKeys = Object.keys(params).filter(k => /^[a-z]$/.test(k));
+  // Collect single-uppercase-letter angle keys (A, B, C, D, …)
+  const angleKeys = Object.keys(params).filter(k => /^[A-Z]$/.test(k));
+
+  const numSides  = sideKeys.length;
+  const numAngles = angleKeys.length;
+  const maxParams = Math.max(numSides, numAngles);
+
+  // All zeros → point
+  const allKeys = [...sideKeys, ...angleKeys];
+  if (allKeys.length > 0 && allKeys.every(k => parseTriangleNum(params[k]) === 0)) {
+    return { type: "point" };
+  }
+
+  // More than 3 side/angle parameters → regular polygon
+  if (maxParams > 3) {
+    const names = { 4: "Quadrilateral", 5: "Pentagon", 6: "Hexagon",
+                    7: "Heptagon", 8: "Octagon", 9: "Nonagon", 10: "Decagon" };
+    const label = names[maxParams] ? `Regular ${names[maxParams]}` : `Regular ${maxParams}-gon`;
+    return { type: "polygon", sides: String(maxParams), label };
+  }
+
+  // Examine angle values for known regular-polygon interior angles
+  const angleValues = angleKeys.map(k => parseTriangleNum(params[k]));
+  if (angleValues.length >= 3 && angleValues.every(a => a === angleValues[0])) {
+    const commonAngle = angleValues[0];
+
+    // All angles 90° with equal sides → square; unequal → rectangle
+    if (commonAngle === 90) {
+      const sideValues = sideKeys.map(k => parseTriangleNum(params[k]));
+      const allEqual = sideValues.length > 0 && sideValues.every(s => s === sideValues[0]);
+      if (allEqual && sideValues.length > 0) {
+        return { type: "square", side: params[sideKeys[0]] };
+      }
+      if (sideValues.length >= 2) {
+        return {
+          type: "rectangle",
+          width:  params[sideKeys[1]] || params.b,
+          height: params[sideKeys[0]] || params.a,
+        };
+      }
+    }
+
+    // Map known regular-polygon interior angles → number of sides
+    // A regular n-gon has interior angles of (n-2)×180/n degrees.
+    // The heptagon's exact value is ≈128.57°; both 128 and 129 are accepted
+    // because the model may round either way.
+    const interiorAngleMap = { 108: 5, 120: 6, 128: 7, 129: 7, 135: 8, 140: 9, 144: 10 };
+    const rounded = Math.round(commonAngle);
+    if (interiorAngleMap[rounded]) {
+      const n = interiorAngleMap[rounded];
+      const names = { 5: "Pentagon", 6: "Hexagon", 7: "Heptagon",
+                      8: "Octagon",  9: "Nonagon", 10: "Decagon" };
+      return { type: "polygon", sides: String(n), label: `Regular ${names[n]}` };
+    }
+  }
+
+  return null; // Genuine right triangle — let drawTriangleSVG handle it
+}
+
+/**
  * Builds an inline SVG element representing a labeled right triangle.
  *
  * Geometric convention (matches standard geometry textbooks):
@@ -930,7 +1008,9 @@ function renderAssistantContent(bubbleEl, content) {
         const triParams = parseTriangleParams(tag.raw);
         const container = document.createElement("div");
         container.className = "triangle-container";
-        const svgEl = drawTriangleSVG(triParams);
+        // Smart fallback: detect if the AI mis-used [TRIANGLE: ...] for a non-triangle
+        const detectedShape = detectShapeFromTriangleParams(triParams);
+        const svgEl = detectedShape ? drawShapeSVG(detectedShape) : drawTriangleSVG(triParams);
         container.appendChild(svgEl);
         bubbleEl.appendChild(container);
       } else if (tag.type === "SHAPE") {
@@ -1411,7 +1491,9 @@ function buildExportHtml(graphMap) {
           // Inline the SVG directly into the export HTML
           try {
             const triParams = parseTriangleParams(sMatch[2].trim());
-            const svgEl = drawTriangleSVG(triParams);
+            // Smart fallback: detect if the AI mis-used [TRIANGLE: ...] for a non-triangle
+            const detectedShape = detectShapeFromTriangleParams(triParams);
+            const svgEl = detectedShape ? drawShapeSVG(detectedShape) : drawTriangleSVG(triParams);
             const serializer = new XMLSerializer();
             let svgString = serializer.serializeToString(svgEl);
             if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
