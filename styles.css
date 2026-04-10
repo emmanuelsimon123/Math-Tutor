@@ -632,6 +632,11 @@ body {
   overflow: visible;
 }
 
+.shape-svg {
+  display: block;
+  overflow: visible;
+}
+
 
 .login-overlay {
   position: fixed;

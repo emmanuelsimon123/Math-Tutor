@@ -98,6 +98,30 @@ FORMATTING:
   Example for a 30-60-90 triangle:
     [TRIANGLE: a=1, b=√3, c=2, A=30°, B=60°, C=90°]
   You may omit parameters that are not yet known or not relevant.
+- For other geometric shapes, output a shape tag on its own line:
+    [SHAPE: type=<type>, <params>]
+  Supported types and their parameters:
+  • Regular polygons (pentagon through decagon):
+      [SHAPE: type=polygon, sides=5, label=Regular Pentagon]
+      [SHAPE: type=polygon, sides=6, label=Regular Hexagon]
+      [SHAPE: type=polygon, sides=7, label=Regular Heptagon]
+      [SHAPE: type=polygon, sides=8, label=Regular Octagon]
+      [SHAPE: type=polygon, sides=9, label=Regular Nonagon]
+      [SHAPE: type=polygon, sides=10, label=Regular Decagon]
+  • Square:
+      [SHAPE: type=square, side=<value>]
+  • Rectangle:
+      [SHAPE: type=rectangle, width=<value>, height=<value>]
+  • Circle:
+      [SHAPE: type=circle, r=<radius>]
+  • Rhombus:
+      [SHAPE: type=rhombus, side=<value>]
+  • Line (extends infinitely):
+      [SHAPE: type=line]
+  • Point (zero dimensions):
+      [SHAPE: type=point]
+  Always use [SHAPE: ...] for these shapes and [TRIANGLE: ...] only for right triangles \
+with specific side/angle measurements.
 - Keep responses concise and age-appropriate.
 - If a student uploads an image of a math problem, describe what you see, \
   then guide them Socratically just as you would for a typed question.`;
